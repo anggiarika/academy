@@ -15,8 +15,15 @@ router = APIRouter(tags=["school"])
 @router.get("/classes", response_model=List[ClassOut])
 async def list_classes(_: AnyUser):
     classes = await db.classes.find({}, {"_id": 0}).sort("name", 1).to_list(100)
+    counts = {
+        row["_id"]: row["n"]
+        async for row in db.students.aggregate([
+            {"$unwind": "$class_ids"},
+            {"$group": {"_id": "$class_ids", "n": {"$sum": 1}}},
+        ])
+    }
     for c in classes:
-        c["student_count"] = await db.students.count_documents({"class_ids": c["id"]})
+        c["student_count"] = counts.get(c["id"], 0)
     return classes
 
 

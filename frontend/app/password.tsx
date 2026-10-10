@@ -6,8 +6,9 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/src/api";
-import { notify, ScreenHeader } from "@/src/components/header";
-import { Button, Field, space, Txt, useInputStyle } from "@/src/components/ui";
+import { useAuth } from "@/src/auth";
+import { confirmAction, notify, ScreenHeader } from "@/src/components/header";
+import { Button, Field, radius, space, Txt, useInputStyle } from "@/src/components/ui";
 import { makeStyles, useTheme } from "@/src/theme";
 
 export default function ChangePassword() {
@@ -18,6 +19,16 @@ export default function ChangePassword() {
   const [oldPw, setOldPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [delPw, setDelPw] = useState("");
+  const { signOut } = useAuth();
+  const del = useMutation({
+    mutationFn: () => api.deleteMyAccount(delPw),
+    onSuccess: async () => {
+      await signOut();
+      router.replace("/login");
+    },
+    onError: (e: Error) => notify("Gagal", e.message),
+  });
 
   const mismatch = !!confirm && confirm !== newPw;
   const tooShort = !!newPw && newPw.length < 8;
@@ -60,6 +71,21 @@ export default function ChangePassword() {
           loading={save.isPending}
           disabled={!oldPw || !newPw || tooShort || confirm !== newPw}
         />
+
+        <View style={styles.danger} testID="delete-account-section">
+          <Txt variant="heading" style={{ color: colors.error }}>Hapus Akun</Txt>
+          <Txt variant="caption">Akun Anda akan dihapus permanen dan tidak bisa login lagi. Data siswa dan presensi tetap tersimpan.</Txt>
+          <TextInput testID="delete-account-password-input" style={input.input} value={delPw} onChangeText={setDelPw} secureTextEntry placeholder="Konfirmasi password" placeholderTextColor={colors.muted} />
+          <Button
+            testID="delete-account-button"
+            title="Hapus Akun Saya"
+            icon="trash-outline"
+            variant="danger"
+            loading={del.isPending}
+            disabled={!delPw}
+            onPress={() => confirmAction("Hapus akun?", "Tindakan ini tidak bisa dibatalkan.", () => del.mutate())}
+          />
+        </View>
       </KeyboardAwareScrollView>
     </View>
   );
@@ -67,4 +93,5 @@ export default function ChangePassword() {
 
 const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surfaceSecondary },
+  danger: { marginTop: space.xl, gap: space.sm, padding: space.lg, borderRadius: radius.lg, backgroundColor: c.errorSoft },
 }));

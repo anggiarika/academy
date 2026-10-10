@@ -157,3 +157,17 @@ export function isScheduledToday(schedule: string): boolean {
   const today = DAYS[new Date().getDay()].toLowerCase();
   return schedule.toLowerCase().includes(today);
 }
+
+export function receiptMessage(inv: InvoiceOut, creditsNow: number): string {
+  return [
+    `Yth. ${inv.parent_name || "Orang Tua/Wali"} dari ${inv.student_name},`,
+    "",
+    "Terima kasih, pembayaran Anda sudah kami terima ✅",
+    `• Kelas: ${programLabel(inv.program)} – paket ${inv.package} pertemuan`,
+    `• Jumlah: ${rupiah(inv.amount)}${inv.method ? ` (${inv.method})` : ""}`,
+    `• Tanggal: ${shortDateTime(inv.paid_at ?? new Date().toISOString())}`,
+    `• Sisa kredit sekarang: ${creditsNow} pertemuan`,
+    "",
+    "Sampai jumpa di kelas berikutnya! 🙏",
+  ].join("\n");
+}

@@ -10,7 +10,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api, fileSource } from "@/src/api";
 import { confirmAction, notify, ScreenHeader } from "@/src/components/header";
 import { Badge, Button, Card, CenterState, radius, Segmented, space, Txt } from "@/src/components/ui";
-import { invoiceMessage, PRICES, programLabel, rupiah, sendWhatsApp, shortDateTime, upgradeSavings } from "@/src/format";
+import { invoiceMessage, PRICES, programLabel, receiptMessage, rupiah, sendWhatsApp, shortDateTime, upgradeSavings } from "@/src/format";
+import type { InvoiceOut } from "@/src/types";
 import { makeStyles, useTheme } from "@/src/theme";
 
 export default function InvoiceDetail() {
@@ -24,13 +25,27 @@ export default function InvoiceDetail() {
 
   const pay = useMutation({
     mutationFn: () => api.payInvoice(id, method),
-    onSuccess: (inv) => {
+    onSuccess: async (inv) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       qc.invalidateQueries();
-      notify("Lunas", `${inv.package} kredit ${programLabel(inv.program)} ditambahkan ke ${inv.student_name}.`);
+      if (inv.parent_phone) {
+        // Auto-open WhatsApp with a thank-you receipt (user taps Send in WhatsApp).
+        await sendReceipt(inv);
+      } else {
+        notify("Lunas", `${inv.package} kredit ${programLabel(inv.program)} ditambahkan ke ${inv.student_name}.`);
+      }
     },
     onError: (e: Error) => notify("Gagal", e.message),
   });
+
+  const sendReceipt = async (inv: InvoiceOut) => {
+    try {
+      const student = await api.student(inv.student_id);
+      await sendWhatsApp(inv.parent_phone, receiptMessage(inv, student.wallets[inv.program]?.credits ?? inv.package));
+    } catch {
+      notify("Lunas", "Pembayaran tercatat. Tekan 'Kirim Tanda Terima via WA' untuk mengirim ke orang tua.");
+    }
+  };
 
   const del = useMutation({
     mutationFn: () => api.deleteInvoice(id),
@@ -165,12 +180,16 @@ export default function InvoiceDetail() {
 
       <View style={[styles.sticky, { paddingBottom: insets.bottom + space.md }]}>
         <Button
-          testID="send-whatsapp-invoice-button"
-          title="Kirim Tagihan via WA"
+          testID={paid ? "send-receipt-whatsapp-button" : "send-whatsapp-invoice-button"}
+          title={paid ? "Kirim Tanda Terima via WA" : "Kirim Tagihan via WA"}
           icon="logo-whatsapp"
           variant="whatsapp"
-          disabled={!inv.parent_phone || paid}
-          onPress={() => sendWhatsApp(inv.parent_phone, invoiceMessage(inv)).catch(() => notify("Gagal", "Tidak bisa membuka WhatsApp"))}
+          disabled={!inv.parent_phone}
+          onPress={() =>
+            paid
+              ? sendReceipt(inv)
+              : sendWhatsApp(inv.parent_phone, invoiceMessage(inv)).catch(() => notify("Gagal", "Tidak bisa membuka WhatsApp"))
+          }
         />
         {!paid && (
           <Button

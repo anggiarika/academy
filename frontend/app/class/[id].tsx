@@ -3,13 +3,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { FlatList, ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
 import { notify, ScreenHeader } from "@/src/components/header";
 import { QrScanner } from "@/src/components/qr-scanner";
+import { exportPdf, qrSheetHtml } from "@/src/pdf";
 import { Badge, Button, CenterState, creditTone, fonts, radius, space, Txt, useInputStyle } from "@/src/components/ui";
 import { prettyDate, programLabel, shiftDate, todayISO } from "@/src/format";
 import type { AttendanceStatus } from "@/src/types";
@@ -76,6 +77,21 @@ export default function ClassAttendance() {
     });
   };
   const [scanning, setScanning] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const printCards = async () => {
+    if (!cls.data || !students.data?.length) {
+      notify("Belum ada siswa", "Tambahkan siswa ke kelas ini terlebih dahulu.");
+      return;
+    }
+    setPrinting(true);
+    try {
+      await exportPdf(await qrSheetHtml(cls.data, students.data), `Kartu QR ${cls.data.name}`);
+    } catch (e) {
+      notify("Gagal mencetak", e instanceof Error ? e.message : "Coba lagi");
+    } finally {
+      setPrinting(false);
+    }
+  };
   const onScan = (sid: string) => {
     const s = students.data?.find((x) => x.id === sid);
     if (!s) return "Siswa tidak terdaftar di kelas ini";
@@ -97,14 +113,21 @@ export default function ClassAttendance() {
         title={cls.data?.name ?? "Kelas"}
         subtitle={cls.data ? `${programLabel(cls.data.program)} · ${cls.data.schedule}` : undefined}
         right={
-          user?.role === "keuangan" && cls.data ? (
-            <Pressable
-              testID="edit-class-button"
-              style={styles.iconBtn}
-              onPress={() => { setForm({ name: cls.data.name, schedule: cls.data.schedule }); setEditing((e) => !e); }}
-            >
-              <Ionicons name={editing ? "close" : "create-outline"} size={20} color={colors.onSurfaceTertiary} />
-            </Pressable>
+          cls.data ? (
+            <View style={{ flexDirection: "row", gap: space.sm }}>
+              <Pressable testID="print-qr-cards-button" style={styles.iconBtn} onPress={printCards} disabled={printing}>
+                {printing ? <ActivityIndicator color={colors.brandPrimary} /> : <Ionicons name="print-outline" size={20} color={colors.onSurfaceTertiary} />}
+              </Pressable>
+              {user?.role === "keuangan" && (
+                <Pressable
+                  testID="edit-class-button"
+                  style={styles.iconBtn}
+                  onPress={() => { setForm({ name: cls.data.name, schedule: cls.data.schedule }); setEditing((e) => !e); }}
+                >
+                  <Ionicons name={editing ? "close" : "create-outline"} size={20} color={colors.onSurfaceTertiary} />
+                </Pressable>
+              )}
+            </View>
           ) : null
         }
       />

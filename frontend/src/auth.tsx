@@ -8,6 +8,7 @@ interface AuthState {
   user: UserOut | null;
   ready: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -38,13 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user);
   }, []);
 
+  const signUp = useCallback(async (name: string, email: string, password: string) => {
+    const res = await api.register(name.trim(), email.trim().toLowerCase(), password);
+    await setToken(res.access_token);
+    setUser(res.user);
+  }, []);
+
   const signOut = useCallback(async () => {
     await setToken(null);
     queryClient.clear();
     setUser(null);
   }, []);
 
-  return <AuthContext.Provider value={{ user, ready, signIn, signOut }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, ready, signIn, signUp, signOut }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthState {

@@ -84,6 +84,10 @@ async function uploadReceipt(invoiceId: string, uri: string, name: string, type:
 export const api = {
   login: (email: string, password: string) => post<TokenOut>("/auth/login", { email, password }),
   me: () => request<UserOut>("/auth/me"),
+  register: (name: string, email: string, password: string) =>
+    post<TokenOut>("/auth/register", { name, email, password }),
+  deleteMyAccount: (password: string) =>
+    request<{ ok: boolean }>("/auth/me", { method: "DELETE", body: JSON.stringify({ password }) }),
   changePassword: (old_password: string, new_password: string) =>
     post<{ ok: boolean }>("/auth/change-password", { old_password, new_password }),
   studentAttendance: (id: string, month: string) =>

@@ -20,6 +20,8 @@ Pilihan user: login email+password per akun (Guru & Keuangan), tagihan di aplika
 - 2026-10 iteration_3 (all passed): Ekspor PDF laporan (expo-print/sharing), rekap kehadiran per siswa + WA ke orang tua (/api/students/{id}/attendance), ganti password (/api/auth/change-password), pengingat tagihan >=3 hari (/api/invoices/{id}/remind).
 - 2026-10 iteration_4 (all passed): Tren pemasukan 6 bulan (/api/reports/trend), Presensi QR (kartu QR siswa + scan expo-camera di kelas), reminder massal antrean WA, Kelas Hari Ini di Beranda (berdasarkan teks jadwal).
 - 2026-10: Riwayat Pembayaran di halaman siswa (GET /api/invoices?student_id=): total lunas/belum + daftar tagihan yang bisa ditekan.
+- 2026-10 iteration_5 (all passed): Cetak Kartu QR per kelas (src/pdf.ts, qrcode SVG → PDF/print), Tanda Terima WA otomatis setelah Tandai Lunas + tombol kirim ulang di tagihan lunas.
+- 2026-10 iteration_6 (all passed): Sign-up mandiri (/api/auth/register, selalu role guru; akun keuangan via Kelola Akun), hapus akun sendiri (DELETE /api/auth/me, App Store), agregasi jumlah siswa per kelas. Deployment check: store-ready.
 
 ## Backlog
 - P2: Pengingat otomatis terjadwal, dashboard tren pemasukan, absensi via QR

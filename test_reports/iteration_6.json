@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 6 (self sign-up) fully verified. Backend: 7/7 pytest cases pass on POST /api/auth/register (201 w/ guru-forced role, 409 case-insensitive dupe, 422 short password & invalid email, end-to-end register->login->/me->403 on /invoices, seeded keuangan smoke). Frontend (mobile 390x844): go-to-register-button on login navigates to /register which has all 7 required testIDs; inline validation shows 'Password minimal 8 karakter' and 'Konfirmasi password tidak sama'; submit disabled until valid; successful register auto-logs in and lands on Beranda with 'Halo, <name>' greeting, green 'Guru' badge, and Tagihan tab hidden; duplicate email surfaces exact message 'Email sudah terdaftar, silakan masuk'; keuangan login still works and sees Tagihan tab. Test users cleaned up; only seeded accounts remain.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' — somewhere in the UI theme/components, legacy shadowColor/shadowOffset/shadowOpacity/shadowRadius are still used. Non-blocking but should be migrated to boxShadow for RN 0.76+. Reference: likely /app/frontend/src/components/ui.* or theme files."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter6_register.py",
+    "/app/test_reports/pytest/iter6_results.xml"
+  ],
+  "action_items": [
+    "Optional: migrate deprecated shadow* style props to boxShadow in UI/theme to silence RN warning."
+  ],
+  "critical_code_review_comments": [
+    "auth.py register handler correctly ignores any client-sent 'role' field (Pydantic model has no role) and always hard-codes 'guru' — matches security requirement.",
+    "Duplicate detection relies on Mongo unique index on email + lowercase normalization in both /login and /register; case-insensitive duplicate test passes (409).",
+    "Password hashing uses run_in_threadpool — good (bcrypt is CPU-bound).",
+    "register.tsx client-side validation (len>=8, confirm match, name/email non-empty) mirrors backend; submit disabled correctly until valid."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter6_register.py (new)"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (12/12 UI steps)"},
+  "seed_data_creation": "None. Test created transient users with 'TEST_signup_' / 'test_ui_' email prefix and cleaned them up via fixture + post-run script. Seeded accounts (keuangan@sekolah.id, guru@sekolah.id) untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "test_iter6_register.py has an autouse fixture that deletes users matching ^test_signup_.* via MongoClient (MONGO_URL, DB_NAME from env). Browser UI flow uses /register route; backend expects email+name+password only (no role field in RegisterIn)."
+}

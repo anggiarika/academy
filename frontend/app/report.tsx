@@ -1,15 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
 import { useState } from "react";
-import { Platform, Pressable, RefreshControl, ScrollView, Share, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Share, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/src/api";
 import { notify, ScreenHeader } from "@/src/components/header";
 import { Button, Card, CenterState, radius, space, Txt } from "@/src/components/ui";
 import { monthLabel, programLabel, reportHtml, reportMessage, rupiah, shiftMonth, todayISO } from "@/src/format";
+import { exportPdf as savePdf } from "@/src/pdf";
 import { makeStyles, useTheme } from "@/src/theme";
 
 export default function Report() {
@@ -26,16 +25,7 @@ export default function Report() {
     setExporting(true);
     try {
       const html = reportHtml(q.data);
-      if (Platform.OS === "web") {
-        await Print.printAsync({ html });
-      } else {
-        const { uri } = await Print.printToFileAsync({ html });
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: `Laporan ${monthLabel(month)}`, UTI: "com.adobe.pdf" });
-        } else {
-          notify("PDF dibuat", uri);
-        }
-      }
+      await savePdf(html, `Laporan ${monthLabel(month)}`);
     } catch (e) {
       notify("Gagal ekspor", e instanceof Error ? e.message : "Coba lagi");
     } finally {

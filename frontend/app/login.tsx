@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Redirect } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { useState } from "react";
-import { TextInput, View } from "react-native";
+import { Pressable, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -78,6 +78,10 @@ export default function Login() {
         </Field>
         {!!error && <Txt testID="login-error-text" style={{ color: colors.error }}>{error}</Txt>}
         <Button testID="login-submit-button" title="Masuk" onPress={submit} loading={loading} disabled={!email || !password} />
+        <Pressable testID="go-to-register-button" onPress={() => router.push("/register")} style={styles.switchLink} hitSlop={8}>
+          <Txt>Belum punya akun? </Txt>
+          <Txt variant="label" style={{ color: colors.brandPrimary }}>Daftar</Txt>
+        </Pressable>
       </View>
     </KeyboardAwareScrollView>
   );
@@ -91,4 +95,5 @@ const useStyles = makeStyles((c) => ({
     alignItems: "center", justifyContent: "center",
   },
   hint: { fontFamily: fonts.regular },
+  switchLink: { flexDirection: "row", justifyContent: "center", alignItems: "center", minHeight: 44 },
 }));
