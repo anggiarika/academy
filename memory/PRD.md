@@ -19,6 +19,7 @@ Pilihan user: login email+password per akun (Guru & Keuangan), tagihan di aplika
 - 2026-10 iteration_2 (all passed): Kelola Akun (/api/users), Upgrade Paket (WA offer + switch 4x/12x on unpaid invoice), Laporan Bulanan (/api/reports/monthly + share), Bukti Transfer (Emergent Object Storage, /api/invoices/{id}/receipt, /api/files/{path}).
 - 2026-10 iteration_3 (all passed): Ekspor PDF laporan (expo-print/sharing), rekap kehadiran per siswa + WA ke orang tua (/api/students/{id}/attendance), ganti password (/api/auth/change-password), pengingat tagihan >=3 hari (/api/invoices/{id}/remind).
 - 2026-10 iteration_4 (all passed): Tren pemasukan 6 bulan (/api/reports/trend), Presensi QR (kartu QR siswa + scan expo-camera di kelas), reminder massal antrean WA, Kelas Hari Ini di Beranda (berdasarkan teks jadwal).
+- 2026-10: Riwayat Pembayaran di halaman siswa (GET /api/invoices?student_id=): total lunas/belum + daftar tagihan yang bisa ditekan.
 
 ## Backlog
 - P2: Pengingat otomatis terjadwal, dashboard tren pemasukan, absensi via QR

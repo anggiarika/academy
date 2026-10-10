@@ -111,7 +111,10 @@ export const api = {
   transactions: (id: string) => request<TransactionOut[]>(`/students/${id}/transactions`),
   recordIzin: (id: string, body: IzinIn) => post<StudentOut>(`/students/${id}/izin`, body),
 
-  invoices: (status?: "unpaid" | "paid") => request<InvoiceOut[]>(`/invoices${status ? `?status=${status}` : ""}`),
+  invoices: (status?: "unpaid" | "paid", student_id?: string) => {
+    const qs = new URLSearchParams(Object.entries({ status, student_id }).filter(([, v]) => !!v) as [string, string][]).toString();
+    return request<InvoiceOut[]>(`/invoices${qs ? `?${qs}` : ""}`);
+  },
   invoice: (id: string) => request<InvoiceOut>(`/invoices/${id}`),
   createInvoice: (body: InvoiceIn) => post<InvoiceOut>("/invoices", body),
   payInvoice: (id: string, method: string) => post<InvoiceOut>(`/invoices/${id}/pay`, { method }),

@@ -12,7 +12,7 @@ import { confirmAction, notify, ScreenHeader } from "@/src/components/header";
 import { QR_PREFIX } from "@/src/components/qr-scanner";
 import QRCode from "react-native-qrcode-svg";
 import { Badge, Button, Card, CenterState, creditTone, radius, space, Txt, useInputStyle } from "@/src/components/ui";
-import { monthLabel, programLabel, sendWhatsApp, shiftMonth, shortDateTime, statusLabel, studentRecapMessage, todayISO } from "@/src/format";
+import { monthLabel, programLabel, rupiah, sendWhatsApp, shiftMonth, shortDateTime, statusLabel, studentRecapMessage, todayISO } from "@/src/format";
 import type { Program } from "@/src/types";
 import { makeStyles, useTheme } from "@/src/theme";
 
@@ -34,6 +34,7 @@ export default function StudentDetail() {
   const tx = useQuery({ queryKey: ["transactions", id], queryFn: () => api.transactions(id) });
   const [month, setMonth] = useState(todayISO().slice(0, 7));
   const recap = useQuery({ queryKey: ["student-attendance", id, month], queryFn: () => api.studentAttendance(id, month) });
+  const payments = useQuery({ queryKey: ["student-invoices", id], queryFn: () => api.invoices(undefined, id) });
 
   const izin = useMutation({
     mutationFn: (program: Program) => api.recordIzin(id, { program, date: izinDate, note: izinNote }),
@@ -212,6 +213,48 @@ export default function StudentDetail() {
             />
           )}
         </Card>
+
+        <Txt variant="heading" style={{ marginTop: space.md }}>Riwayat Pembayaran</Txt>
+        {payments.isLoading ? (
+          <Txt variant="caption">Memuat…</Txt>
+        ) : !payments.data?.length ? (
+          <Txt variant="caption" testID="payments-empty">Belum ada tagihan untuk siswa ini.</Txt>
+        ) : (
+          <>
+            <Card testID="payments-summary" style={{ flexDirection: "row", gap: space.md }}>
+              <View style={{ flex: 1 }}>
+                <Txt variant="caption">Total sudah dibayar</Txt>
+                <Txt variant="heading" testID="payments-total-paid">
+                  {rupiah(payments.data.filter((i) => i.status === "paid").reduce((sum, i) => sum + i.amount, 0))}
+                </Txt>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Txt variant="caption">Belum dibayar</Txt>
+                <Txt variant="heading" testID="payments-total-unpaid" style={{ color: colors.error }}>
+                  {rupiah(payments.data.filter((i) => i.status === "unpaid").reduce((sum, i) => sum + i.amount, 0))}
+                </Txt>
+              </View>
+            </Card>
+            {payments.data.map((inv) => (
+              <Pressable
+                key={inv.id}
+                testID={`payment-row-${inv.id}`}
+                onPress={() => router.push(`/invoice/${inv.id}`)}
+                style={({ pressed }) => [styles.txRow, pressed && { opacity: 0.85 }]}
+              >
+                <View style={{ flex: 1 }}>
+                  <Txt variant="label">{rupiah(inv.amount)} · {inv.package}x {programLabel(inv.program)}</Txt>
+                  <Txt variant="caption">
+                    {shortDateTime(inv.created_at)}
+                    {inv.status === "paid" ? ` · Lunas ${inv.paid_at ? shortDateTime(inv.paid_at) : ""}${inv.method ? ` (${inv.method})` : ""}` : " · Belum dibayar"}
+                  </Txt>
+                </View>
+                <Badge label={inv.status === "paid" ? "Lunas" : "Belum"} tone={inv.status === "paid" ? "brand" : "error"} />
+                <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+              </Pressable>
+            ))}
+          </>
+        )}
 
         <Txt variant="heading" style={{ marginTop: space.md }}>Riwayat</Txt>
         {tx.data?.length === 0 && <Txt variant="caption">Belum ada riwayat</Txt>}
