@@ -89,6 +89,7 @@ export default function Beranda() {
                 ["report", "Laporan Bulanan", "bar-chart-outline", "/report"],
                 ["users", "Kelola Akun", "people-circle-outline", "/users"],
                 ["settings", "Logo & Nama", "business-outline", "/settings"],
+                ["addStudent", "Tambah Siswa", "person-add-outline", "/student/form"],
               ] as const).map(([key, label, icon, href]) => (
                 <Pressable
                   key={key}

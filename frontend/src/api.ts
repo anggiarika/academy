@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import { storage } from "@/src/utils/storage";
 import type {
   AttendanceIn, AttendanceOut, ClassOut, ClassUpdate, DashboardOut, InvoiceIn, InvoiceOut,
-  IzinIn, MonthlyReport, PackageOut, SettingsOut, StudentAttendanceItem, StudentIn, StudentOut, TokenOut, TransactionOut, TrendPoint, UserCreate, UserOut,
+  IzinIn, MonthlyReport, PackageOut, Role, SettingsOut, StudentAttendanceItem, StudentIn, StudentOut, TokenOut, TransactionOut, TrendPoint, UserCreate, UserOut,
 } from "@/src/types";
 
 const BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
@@ -96,8 +96,8 @@ async function uploadReceipt(invoiceId: string, uri: string, name: string, type:
 export const api = {
   login: (email: string, password: string) => post<TokenOut>("/auth/login", { email, password }),
   me: () => request<UserOut>("/auth/me"),
-  register: (name: string, email: string, password: string) =>
-    post<TokenOut>("/auth/register", { name, email, password }),
+  register: (name: string, email: string, password: string, role: Role) =>
+    post<TokenOut>("/auth/register", { name, email, password, role }),
   deleteMyAccount: (password: string) =>
     request<{ ok: boolean }>("/auth/me", { method: "DELETE", body: JSON.stringify({ password }) }),
   changePassword: (old_password: string, new_password: string) =>

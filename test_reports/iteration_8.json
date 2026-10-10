@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 8 (sign-up role choice + student form inline initial payment) fully verified. Backend 15/15 pytest pass (test_iter8_register_role.py 8/8 + updated test_iter6_register.py 7/7): register role guru -> 201 guru; role keuangan -> 201 keuangan with working access to keuangan-only /invoices; missing role defaults guru; invalid role 'admin' -> 422; duplicate email -> 409; student+invoice+pay (12x) -> wallet credits=12, izin_quota>0, package=12; student+unpaid invoice -> credits stay 0, invoice in unpaid list; update student preserves wallet. Frontend (390x844): /register register-role-guru/keuangan segmented control works; keuangan signup lands on Beranda with 'Keuangan / Admin' badge + tab-tagihan visible; guru signup shows 'Guru' badge + tab-tagihan hidden; home-action-addStudent (keuangan Beranda) and add-student-button (Siswa tab) both open /student/form; selecting a class chip reveals 'Pembayaran awal (opsional)' with pay-program-english/gymnastic chips, pay-package-4/12 cards with prices (Rp 495.000 / Rp 1.335.000), pay-paid-now-toggle, pay-summary-badge ('Kredit +12 & tercatat lunas...' / 'Tagihan Rp 350.000 dibuat...'); paid save -> student detail wallet-english-credits=12, 3 kuota izin, Paket 12x; unpaid save -> wallet-gymnastic-credits=0 and invoice row in Tagihan tab 'Belum Bayar'; edit mode (/student/form?id=...) hides payment section, prefills data, save adds no credits. All test users/students/invoices/transactions deleted after testing; seeded accounts untouched.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/register", "issues": ["Screen title is hardcoded 'Daftar Akun Guru' even when the Keuangan role is selected — copy should adapt or be role-neutral (minor UX). Reference: /app/frontend/app/register.tsx:56"]}
+    ],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Console warning persists: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' (carried over from iterations 6-7, still unfixed). Reference: /app/frontend/src/components/ui.tsx:169 (Segmented active item shadowOpacity) and other shadow usages."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter8_register_role.py",
+    "/app/backend/tests/test_iter6_register.py",
+    "/app/test_reports/pytest/iter8_results.xml"
+  ],
+  "action_items": [
+    "Optional: make /register title role-neutral (e.g. 'Daftar Akun') or reflect the selected role.",
+    "Optional (carried over): migrate deprecated shadow* style props to boxShadow.",
+    "No blocking issues — feature works end-to-end."
+  ],
+  "critical_code_review_comments": [
+    "auth.py register: Role Literal['guru','keuangan'] with default 'guru' gives free 422 on invalid values; email lowercased; DuplicateKeyError -> 409; password_hash via threadpool; _id popped before TokenOut. Correct.",
+    "Stale iter6 test (test_register_ignores_client_role_field, expected forced-guru) contradicted the new owner-approved spec — updated to test_register_honors_client_role_keuangan; now passes.",
+    "student/form.tsx: paidNow defaults to true — matches 'Sudah dibayar' checked-by-default UX; effPayProgram guard prevents stale program selection when classes change; payment section correctly gated on !id (edit mode) and class_ids.length > 0.",
+    "student/form.tsx save flow is 3 sequential API calls (createStudent -> createInvoice -> payInvoice) with no rollback: if payInvoice fails after invoice creation, an unpaid invoice remains — acceptable and recoverable via Tagihan tab, but noted.",
+    "Deep-link auth race from iteration 7 appears mitigated: api.ts request() now awaits loadToken() when token===null (line 32); hard page.goto to /student/[id] and /login worked reliably in this run.",
+    "finance.py pay_invoice: credits += package, izin_quota reset per package, makeup expires (hangus) — matches package pricing shown in UI (4x=1 izin, 12x=3 izin)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter8_register_role.py (new, 8 tests)",
+    "/app/backend/tests/test_iter6_register.py (updated stale role test to new spec)"
+  ],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% (18/18 UI checks across 3 runs)"},
+  "seed_data_creation": "No persistent seed data created. UI tests created 2 users (TEST_ui_keu_*, TEST_ui_guru_*), 2 students (TEST_UI Paid/Unpaid), 2 invoices, 1 transaction — all deleted post-test and verified 0 leftovers. Seeded keuangan@sekolah.id / guru@sekolah.id untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "conftest.py kc/gc fixtures work; new test_iter8_register_role.py adds register-role + initial-payment regression coverage. UI: Segmented option testIDs are '{prefix}-{value}' (register-role-guru/keuangan, invoice-status-unpaid/paid). paidNow checkbox defaults to CHECKED in /student/form — click pay-paid-now-toggle once for the unpaid flow. Class chip testIDs are student-class-chip-{uuid}; pay-program chips appear only after selecting a class and are program-derived (pay-program-english|gymnastic). tab-* buttons only exist on tab screens — from a Stack screen (student detail) navigate via page.goto or back button first. Browser context does not persist between runs — always login first.",
+  "rca_of_issue": ""
+}

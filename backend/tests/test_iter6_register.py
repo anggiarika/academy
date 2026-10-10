@@ -1,7 +1,8 @@
 """Iteration 6: self sign-up (POST /api/auth/register) tests.
 
 Covers:
-- 201 success: returns access_token + user.role 'guru' (role ignored if client sends it)
+- 201 success: returns access_token + user.role 'guru'
+- Client-chosen role 'keuangan' is honored (owner-approved self sign-up choice, iter 8)
 - Duplicate email case-insensitive -> 409
 - Short password -> 422
 - Invalid email -> 422
@@ -56,8 +57,8 @@ def test_register_success_returns_token_and_guru_role(unique_email):
     assert body["user"]["name"] == "Test User"
 
 
-def test_register_ignores_client_role_field(unique_email):
-    # Even if attacker sends role=keuangan, server must force guru.
+def test_register_honors_client_role_keuangan(unique_email):
+    # Iteration 8: owner explicitly allows self sign-up as keuangan.
     r = requests.post(
         f"{API}/auth/register",
         json={
@@ -69,7 +70,7 @@ def test_register_ignores_client_role_field(unique_email):
         timeout=30,
     )
     assert r.status_code == 201, r.text
-    assert r.json()["user"]["role"] == "guru"
+    assert r.json()["user"]["role"] == "keuangan"
 
 
 # ---------- validation errors ----------

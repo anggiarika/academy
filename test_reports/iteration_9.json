@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 9 frontend-only verification of the add-student parent-fields bug fix (mobile viewport 390x844, keuangan@sekolah.id). PASS: (1) Add mode — student-parent-input and student-phone-input accept slow human-like typing (100-150ms/keystroke) AND fast typing with zero keystroke loss; save persists; student detail shows student-parent-name='Ibu Ratna Sari' / student-parent-phone='081234567890' (UI + API verified). (2) Payment regression — class chip reveals pay-program-english; selecting it reveals pay-package-4, pay-package-12, pay-paid-now-toggle, pay-summary-badge; all absent in edit mode (0 pay-* testIDs). (3) Edit save keeps edits (API-verified parent_name/phone); in-app edit->save->router.back() works. (4) Register title now reads 'Daftar Akun' ('Daftar Akun Guru' gone). FAIL (1): edit-mode race NOT fully fixed — delayed GET /api/students/{id} by 6s via route interception, typed 'RACE ORTU'/'08999' into parent fields BEFORE data arrived; when data resolved, the one-time prefill useEffect OVERWROTE typed text with server values (screenshots: edit_race_after.png). The prefilled-ref fix prevents repeated overwrites but the first prefill still blindly setForm()s over user input. This matches the user's original symptom (typed text disappears) on cold start/deep-link/refresh of the edit form on slow networks. MINOR: router.back() after save/delete shows 'The action GO_BACK was not handled by any navigator' error toast when the form/detail screen was entered via deep link (page.goto) with no navigation history. Cleanup done: test student deleted, 0 TEST_I9 leftovers; seeded accounts untouched.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Edit student form — typing before student data resolves", "issue": "One-time prefill useEffect (student/form.tsx:42-48) overwrites text the user typed before GET /api/students/{id} resolves. prefilled ref only blocks REPEAT prefills; the first prefill does not check whether the form is dirty. Repro: delay student API 6s -> open /student/form?id=<id> -> type into student-parent-input/student-phone-input -> when data arrives, typed text is replaced by server values. Likely the real-world cause of the reported bug on native cold starts / slow networks.", "affected_testIDs": ["student-parent-input", "student-phone-input", "student-name-input"]},
+      {"flow": "Save/delete after deep-link entry (no nav history)", "issue": "router.back() in save.onSuccess and after delete throws 'The action GO_BACK was not handled by any navigator' toast when user landed directly on /student/form?id=... or /student/[id] via URL (web preview). Save/delete itself succeeds. Low severity on native (users always arrive with history).", "affected_testIDs": ["student-save-button", "delete-student-button"]}
+    ],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Console warning persists: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' (carried over from iterations 6-8, still unfixed). Reference: /app/frontend/src/components/ui.tsx (Segmented active item) and other shadow usages."}
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/screenshots_iter9/add_form_filled.png",
+    "/app/test_reports/screenshots_iter9/student_detail.png",
+    "/app/test_reports/screenshots_iter9/edit_race_after.png"
+  ],
+  "action_items": [
+    "HIGH: Fix edit-mode prefill race in /app/frontend/app/student/form.tsx — mark the form dirty on first user interaction (e.g. set prefilled.current = true inside setField()/toggleClass()), or only prefill when the form is still pristine (all fields empty / class_ids untouched), so text typed before the student query resolves is never overwritten.",
+    "LOW: Guard router.back() after save/delete with router.canGoBack() ? router.back() : router.replace(<detail or list>) to avoid the GO_BACK error toast on deep-link entry.",
+    "Optional (carried over from iter 6-8): migrate deprecated shadow* style props to boxShadow."
+  ],
+  "critical_code_review_comments": [
+    "student/form.tsx:42-48 — prefill guard `if (existing.data && !prefilled.current)` is insufficient: prefilled.current is only set when data arrives, so user keystrokes before resolution are clobbered by the setForm on line 46. Verified empirically with 6s network delay.",
+    "student/form.tsx:70 — functional setState updates (setForm((f) => ...)) are correct and fixed the add-mode keystroke loss; verified with 150ms/keystroke and 0ms typing, zero loss.",
+    "Payment section gating `{!id && form.class_ids.length > 0}` verified: hidden in edit mode even with prefilled class_ids; in add mode requires class selection; package cards/toggle/badge additionally require pay-program chip selection (by design).",
+    "register.tsx:56 — title 'Daftar Akun' confirmed role-neutral now."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only request)", "frontend": "87.5% (7/8 checks passed; edit-mode race failed)"},
+  "seed_data_creation": "Created 1 student 'TEST_I9 Siswa Add' (class English A, no payment) during testing; edited twice; deleted via UI (window.confirm accepted); API-verified 0 TEST_I9 students remain. No invoices/transactions created. Seeded keuangan@sekolah.id / guru@sekolah.id untouched.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Race test technique: page.route('**/api/students/**') with async handler delaying GET /api/students/{id} (regex r'/api/students/[^/?]+$') by ~6s, then page.goto edit form, type immediately, poll student-name-input until prefilled, compare values. Token in localStorage key 'presensi_access_token' is JSON-encoded (strip quotes via JSON.parse). Delete confirmation uses window.confirm on web — register page.on('dialog', accept) before clicking delete-student-button. After save in edit mode, router.back() only works when there is navigation history (arrive via edit-student-button on detail page, not page.goto). wait_for_url regex r'.*/student/(?!form)[0-9a-f-]+.*' distinguishes detail from /student/form.",
+  "rca_of_issue": "Original bug: 'nama orang tua dan nomor orangtua tidak bisa diisi' in student form. Two contributing causes: (1) stale-closure setState losing keystrokes — FIXED and verified (functional updates, form.tsx:70); (2) edit-mode prefill useEffect overwriting user input when the student query resolves — PARTIALLY fixed: prefilled ref stops repeat overwrites, but the FIRST prefill still overwrites anything typed before data arrives (reproduced with 6s delayed API: typed 'RACE ORTU' replaced by server value). Reproduction: slow network + cold open of /student/form?id=<id>, start typing parent name immediately, watch it get replaced when data loads. Mitigation: treat first user edit as 'dirty' (set prefilled.current=true in setField/toggleClass) or skip prefill unless form is pristine."
+}

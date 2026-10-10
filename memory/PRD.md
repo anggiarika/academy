@@ -23,6 +23,7 @@ Pilihan user: login email+password per akun (Guru & Keuangan), tagihan di aplika
 - 2026-10 iteration_5 (all passed): Cetak Kartu QR per kelas (src/pdf.ts, qrcode SVG → PDF/print), Tanda Terima WA otomatis setelah Tandai Lunas + tombol kirim ulang di tagihan lunas.
 - 2026-10 iteration_6 (all passed): Sign-up mandiri (/api/auth/register, selalu role guru; akun keuangan via Kelola Akun), hapus akun sendiri (DELETE /api/auth/me, App Store), agregasi jumlah siswa per kelas. Deployment check: store-ready.
 - 2026-10: Logo & Nama Lembaga (/api/settings + upload logo ke object storage). Dipakai di kartu QR PDF, header laporan PDF, dan pesan tanda terima WA. Guru bisa membaca file logo; file lain tetap khusus keuangan. Fix: token auth dimuat dari secure storage saat reload halaman (request() auto loadToken).
+- 2026-10 iterations 8-10 (all passed): pilihan peran (Guru/Keuangan) di sign-up, tombol Tambah Siswa di Beranda, pembayaran awal inline di form siswa (tagihan otomatis, kredit langsung jika sudah dibayar), fix bug input orang tua (prefill sekali + form dirty + functional setState, race jaringan lambat), fix toast GO_BACK saat deep link.
 
 ## Backlog
 - P2: Pengingat otomatis terjadwal, dashboard tren pemasukan, absensi via QR

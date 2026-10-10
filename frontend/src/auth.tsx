@@ -2,13 +2,13 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useState 
 
 import { api, loadToken, setToken, setUnauthorizedHandler } from "@/src/api";
 import { queryClient } from "@/src/query-client";
-import type { UserOut } from "@/src/types";
+import type { Role, UserOut } from "@/src/types";
 
 interface AuthState {
   user: UserOut | null;
   ready: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string, role: Role) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -39,8 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user);
   }, []);
 
-  const signUp = useCallback(async (name: string, email: string, password: string) => {
-    const res = await api.register(name.trim(), email.trim().toLowerCase(), password);
+  const signUp = useCallback(async (name: string, email: string, password: string, role: Role) => {
+    const res = await api.register(name.trim(), email.trim().toLowerCase(), password, role);
     await setToken(res.access_token);
     setUser(res.user);
   }, []);

@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 10 retest of iteration_9's HIGH priority failing item (edit-mode prefill race) + GO_BACK navigation fixes. ALL 19/19 checks PASSED (mobile viewport 390x844, keuangan@sekolah.id). (1) RACE RETEST (the critical item): delayed GET /api/students/{id} by 6s via page.route interception; typed 'RACE ORTU' (80ms/keystroke) into student-parent-input and '08999' into student-phone-input BEFORE data arrived; when the delayed response resolved, typed text REMAINED untouched (screenshot t2_race_dirty.png). Pristine counterpart also verified: with no user interaction, prefill still fills name/parent/phone from server once data arrives. (2) Add mode: full fill (name, parent, phone, first class chip) -> save -> navigates to detail, student-parent-name='Ibu Test I10' / student-parent-phone='081299988877' shown. (3) Edit save via deep link (page.goto, no history): navigates to /student/{id} detail, ZERO 'GO_BACK was not handled' events in console or dialogs; edit persisted (header title 'TEST_I10 Race Edited'). (4) Delete via deep link: window.confirm auto-accepted, navigates to /siswa, zero GO_BACK events, API GET returns 404. (5) Payment regression: pay-program-* chips present in add mode after class chip selected (count=1), completely absent in edit mode (count=0). GO_BACK events total across the whole session: 0. Cleanup: both test students deleted, API-verified 0 TEST_I10 leftovers.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Console warning persists (carried over from iterations 6-9, still unfixed): '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Reference: /app/frontend/src/components/ui.tsx (Segmented active item) and other shadow usages."}
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/screenshots_iter10/t2_race_dirty.png",
+    "/app/test_reports/screenshots_iter10/t3_add_detail.png",
+    "/app/test_reports/screenshots_iter10/t4_after_edit_save.png",
+    "/app/test_reports/screenshots_iter10/t5_after_delete.png"
+  ],
+  "action_items": [
+    "Optional (carried over from iter 6-9): migrate deprecated shadow* style props to boxShadow.",
+    "Minor design trade-off (by design of the fix, not a bug): if the user types into the edit form BEFORE the student query resolves, prefill is skipped entirely, so fields the user never touched stay empty until manual entry. Acceptable; only relevant on very slow networks."
+  ],
+  "critical_code_review_comments": [
+    "student/form.tsx:68-71 — markDirty() sets prefilled.current=true on the FIRST user edit (setField + toggleClass), so the prefill useEffect (lines 42-48) can no longer clobber typed text. Verified empirically with 6s delayed GET /api/students/{id}: typed 'RACE ORTU'/'08999' survived data arrival.",
+    "Pristine path still works: without any user interaction, prefill fills all fields once the query resolves (name='TEST_I10 Race', parent='Ibu Asli Race', phone='08111000111').",
+    "student/form.tsx:62-63 — save.onSuccess now guards with router.canGoBack(): deep-link edit save uses router.replace(`/student/${s.id}`); 0 GO_BACK errors observed.",
+    "student/[id].tsx:54-55 — delete.onSuccess guards with router.canGoBack() and falls back to router.replace('/siswa'); deep-link delete lands on /siswa with 0 GO_BACK errors.",
+    "Payment gating `{!id && form.class_ids.length > 0}` (form.tsx:122) re-verified: visible in add mode only."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only request)", "frontend": "100% (19/19 checks passed)"},
+  "seed_data_creation": "Created 2 test students during testing: 'TEST_I10 Race' (via API, used for race/edit/delete tests, deleted via UI delete flow) and 'TEST_I10 Add Full' (via add form UI, deleted via API). API-verified 0 TEST_I10 leftovers. No invoices/transactions created. Seeded keuangan@sekolah.id / guru@sekolah.id untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Race retest technique confirmed working: page.route(re.compile(r'/api/students/[^/?]+$')) with async handler asyncio.sleep(6) then route.continue_(); page.goto full reload resets react-query cache so each delayed load is cold. GO_BACK detection: search page console messages + window dialogs (notify() uses window.alert on web) for 'GO_BACK'. window.confirm must be auto-accepted via page.on('dialog') before clicking delete-student-button. Python <3.12: no backslashes/escaped quotes inside f-string expressions — extract to variables first (browser_automation harness failed on this once). All iteration_9 issues are now RESOLVED.",
+  "rca_of_issue": "Original bug: edit-mode one-time prefill useEffect overwrote text typed before GET /api/students/{id} resolved (delayed-network race). Fix verified: markDirty() flips prefilled ref to true on first keystroke/chip toggle, so the late prefill is skipped when the form is dirty; pristine forms still get prefilled. Both behaviors verified with a 6s delayed API response. Secondary fix verified: router.canGoBack() guards in student/form.tsx (save) and student/[id].tsx (delete) eliminate the 'GO_BACK was not handled' navigator toast on deep-link entry — 0 occurrences across save and delete flows."
+}

@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr, Field
 from pymongo.errors import DuplicateKeyError
 
 from core import AnyUser, db, make_token, new_id, now_utc, passwords
-from models import LoginIn, TokenOut, UserOut
+from models import LoginIn, Role, TokenOut, UserOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 _DUMMY_HASH = passwords.hash("dummy-password-ignored")
@@ -29,10 +29,11 @@ async def me(user: AnyUser):
 
 
 class RegisterIn(BaseModel):
-    # No role field: self sign-up always creates a "guru" account.
+    # Self sign-up may pick either role (owner's choice; see also /users for keuangan-managed accounts).
     name: str = Field(min_length=1, max_length=120)
     email: EmailStr
     password: str = Field(min_length=8, max_length=256)
+    role: Role = "guru"
 
 
 @router.post("/register", response_model=TokenOut, status_code=201)
@@ -41,7 +42,7 @@ async def register(body: RegisterIn):
         "id": new_id(),
         "email": body.email.lower(),
         "name": body.name.strip(),
-        "role": "guru",
+        "role": body.role,
         "password_hash": await run_in_threadpool(passwords.hash, body.password),
         "created_at": now_utc(),
     }

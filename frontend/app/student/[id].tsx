@@ -51,7 +51,8 @@ export default function StudentDetail() {
     mutationFn: () => api.deleteStudent(id),
     onSuccess: () => {
       qc.invalidateQueries();
-      router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace("/siswa");
     },
     onError: (e: Error) => notify("Gagal", e.message),
   });

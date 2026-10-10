@@ -6,7 +6,8 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/src/auth";
-import { Button, Field, radius, space, Txt, useInputStyle } from "@/src/components/ui";
+import { Button, Field, radius, Segmented, space, Txt, useInputStyle } from "@/src/components/ui";
+import type { Role } from "@/src/types";
 import { makeStyles, useTheme } from "@/src/theme";
 
 export default function Register() {
@@ -19,6 +20,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [role, setRole] = useState<Role>("guru");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -33,7 +35,7 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      await signUp(name, email, password);
+      await signUp(name, email, password, role);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Pendaftaran gagal");
     } finally {
@@ -51,12 +53,20 @@ export default function Register() {
       <Pressable testID="register-back-button" onPress={() => (router.canGoBack() ? router.back() : router.replace("/login"))} style={styles.back} hitSlop={8}>
         <Ionicons name="chevron-back" size={24} color={colors.onSurface} />
       </Pressable>
-      <Txt variant="title" style={{ marginTop: space.lg }}>Daftar Akun Guru</Txt>
+      <Txt variant="title" style={{ marginTop: space.lg }}>Daftar Akun</Txt>
       <Txt style={{ marginTop: space.xs, marginBottom: space.xl }}>
-        Buat akun untuk mengisi presensi kelas. Akun Keuangan dibuat oleh admin lewat menu Kelola Akun.
+        Buat akun untuk mengisi presensi kelas atau mengelola keuangan.
       </Txt>
 
       <View style={{ gap: space.lg }}>
+        <Field label="Daftar sebagai">
+          <Segmented<Role>
+            testIDPrefix="register-role"
+            value={role}
+            onChange={setRole}
+            options={[{ value: "guru", label: "Guru" }, { value: "keuangan", label: "Keuangan" }]}
+          />
+        </Field>
         <Field label="Nama lengkap">
           <TextInput testID="register-name-input" style={input.input} value={name} onChangeText={setName} placeholder="Nama Anda" placeholderTextColor={colors.muted} returnKeyType="next" />
         </Field>
