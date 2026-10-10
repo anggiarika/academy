@@ -1,14 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { Linking, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { api } from "@/src/api";
+import { api, fileSource } from "@/src/api";
 import { confirmAction, notify, ScreenHeader } from "@/src/components/header";
-import { Badge, Button, Card, CenterState, Segmented, space, Txt } from "@/src/components/ui";
-import { invoiceMessage, programLabel, rupiah, sendWhatsApp, shortDateTime } from "@/src/format";
+import { Badge, Button, Card, CenterState, radius, Segmented, space, Txt } from "@/src/components/ui";
+import { invoiceMessage, PRICES, programLabel, rupiah, sendWhatsApp, shortDateTime, upgradeSavings } from "@/src/format";
 import { makeStyles, useTheme } from "@/src/theme";
 
 export default function InvoiceDetail() {
@@ -35,6 +37,32 @@ export default function InvoiceDetail() {
     onSuccess: () => { qc.invalidateQueries(); router.back(); },
     onError: (e: Error) => notify("Gagal", e.message),
   });
+
+  const [permBlocked, setPermBlocked] = useState(false);
+  const changePkg = useMutation({
+    mutationFn: (pkg: 4 | 12) => api.changePackage(id, pkg),
+    onSuccess: () => qc.invalidateQueries(),
+    onError: (e: Error) => notify("Gagal", e.message),
+  });
+  const upload = useMutation({
+    mutationFn: (a: ImagePicker.ImagePickerAsset) =>
+      api.uploadReceipt(id, a.uri, a.fileName ?? "bukti.jpg", a.mimeType ?? "image/jpeg"),
+    onSuccess: () => qc.invalidateQueries(),
+    onError: (e: Error) => notify("Gagal mengunggah", e.message),
+  });
+
+  const pickReceipt = async () => {
+    let perm = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (!perm.granted && perm.canAskAgain) perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      setPermBlocked(!perm.canAskAgain);
+      if (perm.canAskAgain) notify("Izin galeri dibutuhkan", "Izinkan akses foto untuk melampirkan bukti transfer.");
+      return;
+    }
+    setPermBlocked(false);
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.6 });
+    if (!res.canceled && res.assets[0]) upload.mutate(res.assets[0]);
+  };
 
   if (q.isLoading) return <View style={styles.root}><ScreenHeader title="Tagihan" /><CenterState kind="loading" /></View>;
   if (q.isError || !q.data)
@@ -69,8 +97,50 @@ export default function InvoiceDetail() {
             </View>
           ))}
         </Card>
+
+        <Card testID="receipt-card" style={{ gap: space.md }}>
+          <Txt variant="label">Bukti Transfer</Txt>
+          {inv.receipt_path ? (
+            <Image testID="receipt-image" source={fileSource(inv.receipt_path)} style={styles.receipt} contentFit="contain" transition={200} />
+          ) : (
+            <Txt variant="caption">Belum ada bukti transfer dilampirkan.</Txt>
+          )}
+          <Button
+            testID="upload-receipt-button"
+            title={inv.receipt_path ? "Ganti Bukti Transfer" : "Lampirkan Bukti Transfer"}
+            icon="image-outline"
+            variant="secondary"
+            loading={upload.isPending}
+            onPress={pickReceipt}
+          />
+          {permBlocked && (
+            <View style={{ gap: space.sm }}>
+              <Txt variant="caption" style={{ color: colors.error }}>Akses galeri ditolak. Aktifkan di pengaturan untuk melampirkan foto.</Txt>
+              <Button testID="open-settings-button" title="Buka Pengaturan" variant="ghost" icon="settings-outline" onPress={() => Linking.openSettings()} />
+            </View>
+          )}
+        </Card>
+
         {!paid && (
           <>
+            <Txt variant="label">Paket</Txt>
+            <Segmented
+              testIDPrefix="invoice-package-switch"
+              value={String(inv.package) as "4" | "12"}
+              onChange={(v) => changePkg.mutate(Number(v) as 4 | 12)}
+              options={[
+                { value: "4", label: `4x · ${rupiah(PRICES[inv.program][4])}` },
+                { value: "12", label: `12x · ${rupiah(PRICES[inv.program][12])}` },
+              ]}
+            />
+            {inv.package === 4 && (
+              <View style={styles.offer} testID="upgrade-offer-banner">
+                <Txt variant="label" style={{ color: colors.onBrandSecondary }}>
+                  Tawarkan paket 12x: hemat {rupiah(upgradeSavings(inv.program))} + 3 kuota izin
+                </Txt>
+                <Txt variant="caption">Penawaran ini otomatis disertakan di pesan WhatsApp.</Txt>
+              </View>
+            )}
             <Txt variant="label">Metode pembayaran</Txt>
             <Segmented
               testIDPrefix="pay-method"
@@ -120,6 +190,8 @@ const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surfaceSecondary },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: space.md, gap: space.md },
   rowBorder: { borderTopWidth: 1, borderTopColor: c.divider },
+  receipt: { width: "100%", height: 260, borderRadius: radius.md, backgroundColor: c.surfaceTertiary },
+  offer: { backgroundColor: c.brandSecondary, borderRadius: radius.md, padding: space.md, gap: 2 },
   sticky: {
     position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: space.lg, paddingTop: space.md, gap: space.sm,
     backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.border,

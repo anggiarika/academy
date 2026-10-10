@@ -1,0 +1,123 @@
+import uuid
+from datetime import datetime, timezone
+from typing import Dict, List, Literal, Optional
+
+from fastapi import APIRouter, File, Header, HTTPException, Query, UploadFile
+from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import Response
+from pydantic import BaseModel
+
+from core import PACKAGES, FinanceUser, db, user_from_token
+from models import InvoiceOut
+from storage import APP_NAME, get_object, put_object
+
+router = APIRouter(tags=["extras"])
+MAX_RECEIPT_BYTES = 8 * 1024 * 1024
+
+
+class PackageChange(BaseModel):
+    package: Literal[4, 12]
+
+
+@router.post("/invoices/{invoice_id}/package", response_model=InvoiceOut)
+async def change_package(invoice_id: str, body: PackageChange, _: FinanceUser):
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(404, "Tagihan tidak ditemukan")
+    if inv["status"] == "paid":
+        raise HTTPException(400, "Tagihan sudah lunas")
+    amount = PACKAGES[inv["program"]][body.package]
+    await db.invoices.update_one({"id": invoice_id}, {"$set": {"package": body.package, "amount": amount}})
+    return await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+
+
+@router.post("/invoices/{invoice_id}/receipt", response_model=InvoiceOut)
+async def upload_receipt(invoice_id: str, user: FinanceUser, file: UploadFile = File(...)):
+    inv = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not inv:
+        raise HTTPException(404, "Tagihan tidak ditemukan")
+    ctype = file.content_type or "image/jpeg"
+    if not ctype.startswith("image/"):
+        raise HTTPException(400, "File harus berupa gambar")
+    data = await file.read()
+    if len(data) > MAX_RECEIPT_BYTES:
+        raise HTTPException(400, "Ukuran gambar maksimal 8 MB")
+    ext = (file.filename or "bukti.jpg").rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else "jpg"
+    path = f"{APP_NAME}/receipts/{invoice_id}/{uuid.uuid4()}.{ext}"
+    try:
+        result = await run_in_threadpool(put_object, path, data, ctype)
+    except Exception as exc:
+        status = getattr(getattr(exc, "response", None), "status_code", 500)
+        if status == 402:
+            raise HTTPException(402, "Kuota penyimpanan habis, coba lagi nanti")
+        raise HTTPException(502, "Gagal mengunggah bukti transfer")
+    await db.files.insert_one({"path": result["path"], "invoice_id": invoice_id, "content_type": ctype, "uploaded_by": user["id"]})
+    await db.invoices.update_one({"id": invoice_id}, {"$set": {"receipt_path": result["path"]}})
+    return await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+
+
+@router.get("/files/{path:path}")
+async def download_file(path: str, token: Optional[str] = Query(None), authorization: Optional[str] = Header(None)):
+    raw = token or (authorization[7:] if authorization and authorization.lower().startswith("bearer ") else None)
+    if not raw:
+        raise HTTPException(401, "Butuh login")
+    user = await user_from_token(raw)
+    if user["role"] != "keuangan":
+        raise HTTPException(403, "Akses ditolak")
+    record = await db.files.find_one({"path": path}, {"_id": 0})
+    if not record:
+        raise HTTPException(404, "File tidak ditemukan")
+    data, ctype = await run_in_threadpool(get_object, path)
+    return Response(content=data, media_type=record.get("content_type", ctype), headers={"Cache-Control": "private, max-age=86400"})
+
+
+class ClassReport(BaseModel):
+    class_id: str
+    name: str
+    program: str
+    sessions: int
+    counts: Dict[str, int]
+
+
+class MonthlyReport(BaseModel):
+    month: str
+    income_total: int
+    income_count: int
+    income_by_program: Dict[str, int]
+    unpaid_total: int
+    classes: List[ClassReport]
+
+
+@router.get("/reports/monthly", response_model=MonthlyReport)
+async def monthly_report(_: FinanceUser, month: str = Query(..., pattern=r"^\d{4}-\d{2}$")):
+    y, m = map(int, month.split("-"))
+    start = datetime(y, m, 1, tzinfo=timezone.utc)
+    end = datetime(y + (m == 12), 1 if m == 12 else m + 1, 1, tzinfo=timezone.utc)
+    paid = await db.invoices.find({"status": "paid", "paid_at": {"$gte": start, "$lt": end}}, {"_id": 0}).to_list(5000)
+    by_program: Dict[str, int] = {"gymnastic": 0, "english": 0}
+    for i in paid:
+        by_program[i["program"]] = by_program.get(i["program"], 0) + i["amount"]
+    unpaid = await db.invoices.find({"status": "unpaid"}, {"_id": 0, "amount": 1}).to_list(5000)
+
+    classes = await db.classes.find({}, {"_id": 0}).sort("name", 1).to_list(100)
+    sessions = await db.attendance.find({"date": {"$regex": f"^{month}"}}, {"_id": 0}).to_list(5000)
+    reports = []
+    for c in classes:
+        counts = {"hadir": 0, "izin": 0, "alpha": 0, "pengganti": 0}
+        n = 0
+        for s in sessions:
+            if s["class_id"] != c["id"]:
+                continue
+            n += 1
+            for r in s["records"]:
+                counts[r["status"]] = counts.get(r["status"], 0) + 1
+        reports.append(ClassReport(class_id=c["id"], name=c["name"], program=c["program"], sessions=n, counts=counts))
+
+    return MonthlyReport(
+        month=month,
+        income_total=sum(i["amount"] for i in paid),
+        income_count=len(paid),
+        income_by_program=by_program,
+        unpaid_total=sum(i["amount"] for i in unpaid),
+        classes=reports,
+    )

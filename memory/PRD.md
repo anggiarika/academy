@@ -16,8 +16,8 @@ Pilihan user: login email+password per akun (Guru & Keuangan), tagihan di aplika
 
 ## Status
 - All backend (28 tests) & frontend flows passed (iteration_1).
+- 2026-10 iteration_2 (all passed): Kelola Akun (/api/users), Upgrade Paket (WA offer + switch 4x/12x on unpaid invoice), Laporan Bulanan (/api/reports/monthly + share), Bukti Transfer (Emergent Object Storage, /api/invoices/{id}/receipt, /api/files/{path}).
 
 ## Backlog
-- P1: Manajemen akun guru oleh admin (tambah/hapus user)
-- P1: Laporan keuangan bulanan / ekspor
-- P2: Bukti transfer upload, pengingat otomatis, rekap kehadiran per siswa
+- P1: Ekspor laporan ke PDF/Excel
+- P2: Rekap kehadiran per siswa, pengingat tagihan otomatis, ganti password sendiri

@@ -5,7 +5,8 @@ from fastapi import APIRouter, FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from core import client, db, new_id, now_utc, passwords
-from routers import auth, finance, school
+from routers import auth, extras, finance, school, users
+from storage import init_storage
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -19,6 +20,8 @@ async def root():
 api_router.include_router(auth.router)
 api_router.include_router(school.router)
 api_router.include_router(finance.router)
+api_router.include_router(users.router)
+api_router.include_router(extras.router)
 app.include_router(api_router)
 
 app.add_middleware(
@@ -67,6 +70,10 @@ async def seed_user(email: str, password: str, name: str, role: str):
 
 @app.on_event("startup")
 async def startup():
+    try:
+        init_storage()
+    except Exception as exc:
+        logger.error(f"Object storage init failed: {exc}")
     await db.users.create_index("email", unique=True)
     await seed_user(os.environ["ADMIN_EMAIL"], os.environ["ADMIN_PASSWORD"], "Bagian Keuangan", "keuangan")
     await seed_user(os.environ["GURU_EMAIL"], os.environ["GURU_PASSWORD"], "Guru Kelas", "guru")

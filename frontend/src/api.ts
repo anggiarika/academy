@@ -1,7 +1,9 @@
+import { Platform } from "react-native";
+
 import { storage } from "@/src/utils/storage";
 import type {
   AttendanceIn, AttendanceOut, ClassOut, ClassUpdate, DashboardOut, InvoiceIn, InvoiceOut,
-  IzinIn, PackageOut, StudentIn, StudentOut, TokenOut, TransactionOut, UserOut,
+  IzinIn, MonthlyReport, PackageOut, StudentIn, StudentOut, TokenOut, TransactionOut, UserCreate, UserOut,
 } from "@/src/types";
 
 const BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
@@ -47,6 +49,38 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 const post = <T>(path: string, body: unknown) => request<T>(path, { method: "POST", body: JSON.stringify(body) });
 const put = <T>(path: string, body: unknown) => request<T>(path, { method: "PUT", body: JSON.stringify(body) });
 
+// Authenticated image source: native sends header, web <img> needs token in query.
+export function fileSource(path: string) {
+  const uri = `${BASE}/files/${path}`;
+  return Platform.OS === "web"
+    ? { uri: `${uri}?token=${encodeURIComponent(token ?? "")}` }
+    : { uri, headers: { Authorization: `Bearer ${token ?? ""}` } };
+}
+
+async function uploadReceipt(invoiceId: string, uri: string, name: string, type: string): Promise<InvoiceOut> {
+  const form = new FormData();
+  if (Platform.OS === "web") {
+    const blob = await (await fetch(uri)).blob();
+    form.append("file", blob, name);
+  } else {
+    form.append("file", { uri, name, type } as unknown as Blob);
+  }
+  const res = await fetch(`${BASE}/invoices/${invoiceId}/receipt`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token ?? ""}` },
+    body: form,
+  });
+  if (!res.ok) {
+    let msg = `Gagal (${res.status})`;
+    try {
+      const body = await res.json();
+      if (typeof body.detail === "string") msg = body.detail;
+    } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
 export const api = {
   login: (email: string, password: string) => post<TokenOut>("/auth/login", { email, password }),
   me: () => request<UserOut>("/auth/me"),
@@ -77,4 +111,12 @@ export const api = {
   createInvoice: (body: InvoiceIn) => post<InvoiceOut>("/invoices", body),
   payInvoice: (id: string, method: string) => post<InvoiceOut>(`/invoices/${id}/pay`, { method }),
   deleteInvoice: (id: string) => request<{ ok: boolean }>(`/invoices/${id}`, { method: "DELETE" }),
+  changePackage: (id: string, pkg: 4 | 12) => post<InvoiceOut>(`/invoices/${id}/package`, { package: pkg }),
+  uploadReceipt,
+
+  users: () => request<UserOut[]>("/users"),
+  createUser: (body: UserCreate) => post<UserOut>("/users", body),
+  deleteUser: (id: string) => request<{ ok: boolean }>(`/users/${id}`, { method: "DELETE" }),
+
+  monthlyReport: (month: string) => request<MonthlyReport>(`/reports/monthly?month=${month}`),
 };

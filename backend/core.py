@@ -54,6 +54,10 @@ def make_token(user: dict) -> str:
 
 
 async def current_user(token: Annotated[str, Depends(oauth2)]) -> dict:
+    return await user_from_token(token)
+
+
+async def user_from_token(token: str) -> dict:
     unauthorized = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Sesi tidak valid atau kedaluwarsa",

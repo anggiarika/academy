@@ -123,6 +123,7 @@ class InvoiceOut(BaseModel):
     method: Optional[str] = None
     created_at: datetime
     paid_at: Optional[datetime] = None
+    receipt_path: Optional[str] = None
 
 
 class PackageOut(BaseModel):

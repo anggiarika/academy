@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 2 features (Kelola Akun, Upgrade Paket, Bukti Transfer, Laporan Bulanan) tested end-to-end. Backend: 29/29 pytest cases pass covering users CRUD + role rules, package switch 4<->12 (gym 350k/900k, english 495k/1,335k), paid-invoice guard, receipt upload (image/* + non-image 400), file download with query token / Bearer header / 401 / guru 403, and monthly report (bad month 422, structure, guru 403, income reflects a new paid invoice). Frontend (390x844): login -> Beranda shows home-action-report & home-action-users. /users: toggle-add-user-button opens form, create guru works, list refreshes, delete removes row (window.confirm auto-accepted on web). /report: income total (Rp 6.870.000), prev/next month changes report-month-text, 8 class rows, share button visible. /invoice/{id}: amount updates Rp 350.000 <-> Rp 900.000 via invoice-package-switch-4/12, upgrade-offer-banner only shows on 4x, receipt-card + upload-receipt-button present, file-chooser upload succeeds and receipt-image renders. No React Native deprecated packages detected in iter 2 code (expo-image, expo-image-picker, expo-haptics are current). Minor non-blocking: console warning about deprecated 'shadow*' style props (likely from a library).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter2.py",
+    "/app/test_reports/pytest/iter2_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Investigate RN Web console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Likely from a 3rd-party component; cosmetic only.",
+    "(Optional, future) Switch the class-scoped pytest fixtures from instance-methods to @classmethod to silence PytestRemovedIn10Warning."
+  ],
+  "critical_code_review_comments": [
+    "routers/users.py delete_user correctly guards self-delete and last-keuangan deletion; good idempotent logic.",
+    "routers/extras.py package switch uses PACKAGES map and prevents mutation on paid invoices (400); clean.",
+    "storage.py uses lazy init with 503 retry — solid pattern. File download endpoint accepts token via query (for <Image src=>) and Bearer header; keuangan-only enforced server-side.",
+    "monthly_report query uses $gte/$lt on timezone-aware UTC bounds; computes income_by_program and per-class attendance counts correctly.",
+    "frontend/app/users.tsx and report.tsx are small, focused, and all interactive elements have proper testIDs.",
+    "invoice/[id].tsx upload flow uses expo-image-picker with permission guard and settings deeplink — good UX."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter2.py (new; 29 tests)"
+  ],
+  "success_rate": {"backend": "100% (29/29)", "frontend": "100% of in-scope flows"},
+  "seed_data_creation": "Tests create and delete their own temporary users/students/invoices (prefixed TEST_). All cleaned up. The seeded keuangan/guru accounts are preserved. One stray test invoice (id 4a94e94d-...) created during UI testing was deleted at the end.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "frontend/.env uses EXPO_PUBLIC_BACKEND_URL (not EXPO_BACKEND_URL). Student creation payload is {name, parent_name, parent_phone, class_ids:[...]} (no 'program'/'class_id'). Invoice creation requires {student_id, program, package}. GET /auth/me returns current user. File download: GET /api/files/{path}?token=<jwt>. Mobile viewport 390x844. Deep-linking to /invoice/{id} via page.goto can race with auth hydration (localStorage key: presensi_access_token) and show 'Not authenticated'; prefer SPA navigation via tab-tagihan -> invoice-row-* click.",
+  "rca_of_issue": ""
+}

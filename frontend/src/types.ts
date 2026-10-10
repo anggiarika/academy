@@ -103,6 +103,31 @@ export interface InvoiceOut {
   method: string | null;
   created_at: string;
   paid_at: string | null;
+  receipt_path: string | null;
+}
+
+export interface UserCreate {
+  email: string;
+  name: string;
+  password: string;
+  role: Role;
+}
+
+export interface ClassReport {
+  class_id: string;
+  name: string;
+  program: Program;
+  sessions: number;
+  counts: Record<AttendanceStatus, number>;
+}
+
+export interface MonthlyReport {
+  month: string;
+  income_total: number;
+  income_count: number;
+  income_by_program: Record<Program, number>;
+  unpaid_total: number;
+  classes: ClassReport[];
 }
 
 export interface PackageOut {

@@ -75,6 +75,26 @@ export default function Beranda() {
             </Card>
           )}
 
+          {isFinance && (
+            <View style={styles.actions}>
+              {([
+                ["report", "Laporan Bulanan", "bar-chart-outline", "/report"],
+                ["users", "Kelola Akun", "people-circle-outline", "/users"],
+              ] as const).map(([key, label, icon, href]) => (
+                <Pressable
+                  key={key}
+                  testID={`home-action-${key}`}
+                  onPress={() => router.push(href)}
+                  style={({ pressed }) => [styles.action, pressed && { opacity: 0.8 }]}
+                >
+                  <Ionicons name={icon} size={20} color={colors.brandPrimary} />
+                  <Txt variant="label" style={{ flex: 1 }}>{label}</Txt>
+                  <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                </Pressable>
+              ))}
+            </View>
+          )}
+
           {dash.data && dash.data.needs_billing.length > 0 && (
             <View style={{ marginTop: space.xl }}>
               <Txt variant="heading">Perlu Ditagih</Txt>
@@ -139,4 +159,9 @@ const useStyles = makeStyles((c) => ({
     backgroundColor: c.surface, borderRadius: radius.md, marginBottom: space.sm, borderWidth: 1, borderColor: c.border,
   },
   dot: { width: 10, height: 10, borderRadius: 5 },
+  actions: { flexDirection: "row", gap: space.md, marginTop: space.md },
+  action: {
+    flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.md, minHeight: 52,
+    backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border,
+  },
 }));
