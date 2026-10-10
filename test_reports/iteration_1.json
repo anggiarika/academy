@@ -1,0 +1,33 @@
+{
+  "summary": "First-run full stack test for Presensi Kredit (Expo + FastAPI + Mongo). Backend: 28/28 pytest tests passed covering auth (both roles, 401, 422 for short password), role gating (guru 403 on invoices/students POST/izin/class PUT), 8 seeded classes, class rename, student CRUD, wallets created per program, packages pricing (Rp 350k/900k gymnastic, Rp 495k/1.335k english), izin quotas (1 for 4-pack, 3 for 12-pack), invoice create/pay/delete, 409 duplicate unpaid, pay-twice 400, credits added + izin reset + makeup hangus on payment, attendance credit deduction with no double-deduct on re-save and refund on status change, pengganti requires makeup (400), dashboard + transactions. Frontend (mobile 390x844): login (both roles) works, logout works, home dashboard renders with role badge, tagihan tab correctly hidden for guru, navigation across tabs (beranda/presensi/siswa/tagihan) works, presensi class list -> class detail with date prev/next and attendance toggles, siswa list with search + add button, student detail with wallets + izin-open + create-invoice buttons, invoice form with student chips -> program -> package chips -> total text showing Rp 350.000 for Gymnastic 4-pack. No deprecated expo packages. No red-screen errors. Only console warning: shadow* style props deprecated (use boxShadow).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "StyleSheet shadow props", "issue": "Console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Replace shadowColor/shadowOffset/shadowOpacity/shadowRadius with boxShadow for future RN/Expo compatibility. Reference: likely in /app/frontend/src/theme.ts or component styles"}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_api.py", "/app/backend/tests/conftest.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "(optional) Migrate shadow* style props to boxShadow to silence the React Native web deprecation warning",
+    "Populate /app/memory/test_credentials.md with the keuangan/guru credentials so future testing agents don't rely on env defaults"
+  ],
+  "critical_code_review_comments": [
+    "LoginIn requires password min_length=6 which causes 422 for shorter wrong passwords instead of 401 - acceptable but worth noting for UX (frontend already disables submit when password empty)",
+    "Attendance EFFECT logic correctly reverses old deltas on resave - verified with hadir->izin refund path",
+    "All MongoDB queries properly exclude _id with projection {'_id': 0}"
+  ],
+  "updated_files": [
+    "/app/backend/tests/__init__.py (new)",
+    "/app/backend/tests/conftest.py (new)",
+    "/app/backend/tests/test_api.py (new)"
+  ],
+  "success_rate": {"backend": "100% (28/28)", "frontend": "100% core flows"},
+  "seed_data_creation": "Backend tests create and delete TEST_ prefixed students; cleanup via fixture teardown. No permanent seed modifications.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend reachable at EXPO_PUBLIC_BACKEND_URL + /api. Keuangan creds: keuangan@sekolah.id/keuangan123; Guru: guru@sekolah.id/guru1234. 8 seeded classes + 8 demo students. LoginIn requires password min_length=6 (short passwords -> 422). Invoice form progressively reveals: student chip -> program -> package. On web, confirm dialogs use window.confirm (register page.on('dialog', lambda d: d.accept()) before clicking mark-paid-button/delete-invoice-button).",
+  "rca_of_issue": "N/A - no bugs found"
+}

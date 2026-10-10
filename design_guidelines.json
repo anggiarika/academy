@@ -1,0 +1,162 @@
+{
+  "app_name": "EduPresensi Pro",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A bright, clean, and highly professional education management app focused on utility and clarity.",
+  "color": {
+    "surface": "#FFFFFF",
+    "onSurface": "#111827",
+    "surfaceSecondary": "#F9FAFB",
+    "onSurfaceSecondary": "#374151",
+    "surfaceTertiary": "#F3F4F6",
+    "onSurfaceTertiary": "#4B5563",
+    "surfaceInverse": "#1F2937",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#22C55E",
+    "onBrand": "#FFFFFF",
+    "brandPrimary": "#16A34A",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#DCFCE7",
+    "onBrandSecondary": "#166534",
+    "brandTertiary": "#BBF7D0",
+    "onBrandTertiary": "#14532D",
+    "success": "#34C759",
+    "onSuccess": "#FFFFFF",
+    "warning": "#FBBF24",
+    "onWarning": "#78350F",
+    "error": "#EF4444",
+    "onError": "#FFFFFF",
+    "info": "#6B7280",
+    "onInfo": "#FFFFFF",
+    "border": "#E5E7EB",
+    "borderStrong": "#D1D5DB",
+    "divider": "#F3F4F6",
+    "muted": "#6B7280"
+  },
+  "typography": {
+    "displayFontFamily": "Plus Jakarta Sans",
+    "textFontFamily": "Plus Jakarta Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous vertical breathing room. Cards must use horizontal padding and never flush to the screen edge. Use gap: md for 2-column grids.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Ionicons",
+  "glassmorphism": {
+    "enabled": "true",
+    "do's": [
+      "Apply to sticky headers over scrolling content",
+      "Apply to bottom tab bar",
+      "Apply to floating action buttons or sticky CTAs at the bottom"
+    ],
+    "dont's": [
+      "Do not apply to form fields or list rows",
+      "Do not apply to general cards"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Beranda (Dashboard)",
+      "purpose": "Provides a quick overview of today's activities, low credit alerts, and unpaid invoices based on the user's role.",
+      "states": {
+        "loading": "Centered spinner with a skeleton of the stats grid.",
+        "empty": "No alerts to show. An empty clipboard illustration with 'Semua aman terkendali' (All clear).",
+        "error": "Error loading dashboard data. Retry button."
+      },
+      "layout": "Header with 'Selamat Datang' and date. A 2-column grid for summary cards (e.g., Siswa Kredit Tipis, Tagihan Belum Dibayar) using prominent typography for the numbers. Below, a vertical list of today's classes to jump straight into attendance."
+    },
+    {
+      "name": "Presensi (Attendance & Classes)",
+      "purpose": "Lists all 8 classes and allows the teacher to record daily attendance, deduct credits, or track 'izin' and 'pengganti'.",
+      "states": {
+        "loading": "Skeleton list of class cards.",
+        "empty": "No classes available.",
+        "error": "Error loading class list."
+      },
+      "layout": "Class List: Large tappable image cards (Gymnastics/English) with class names. Class Detail: Date selector at top. Scrollable list of students. Each row has Student Avatar, Name, Remaining Credits badge, and a horizontal segmented control for (Hadir, Izin, Alpha, Pengganti). Sticky 'Simpan Presensi' (Save) button at the bottom."
+    },
+    {
+      "name": "Siswa (Student Database)",
+      "purpose": "A comprehensive directory of students, showing their program, remaining credits, and izin quotas.",
+      "states": {
+        "loading": "List skeleton.",
+        "empty": "No students found. Add a new student.",
+        "error": "Error fetching student database."
+      },
+      "layout": "Persistent search bar. Single-column list of student rows. Detail screen uses a clean card layout to display stats: 'Sisa Kredit', 'Kuota Izin', 'Kelas Pengganti', and transaction history."
+    },
+    {
+      "name": "Tagihan (Billing & Invoices)",
+      "purpose": "Manages billing for students whose credits have run out, including mark-as-paid and WhatsApp reminders.",
+      "states": {
+        "loading": "List skeleton.",
+        "empty": "No invoices pending. Display empty clipboard illustration.",
+        "error": "Error loading invoices."
+      },
+      "layout": "Top segmented control (Belum Dibayar, Lunas). Clean list of invoice cards with Student Name, Program, Total, and Status Pill. Invoice Detail: Breakdown of payment, 'Tandai Lunas' (Mark Paid) primary sticky CTA, and a secondary 'Kirim Tagihan via WA' (Send via WhatsApp) button."
+    }
+  ],
+  "images": {
+    "gymnastics_class_hero": {
+      "url": "https://images.unsplash.com/photo-1655842556563-2c28adb3fcc5",
+      "alt": "Kids stretching in a gymnastics class"
+    },
+    "english_class_hero": {
+      "url": "https://images.unsplash.com/photo-1564429238817-393bd4286b2d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHwxfHxraWRzJTIwbGVhcm5pbmclMjBlbmdsaXNoJTIwY2xhc3Nyb29tfGVufDB8fHx8MTc5MTY0Nzg0M3ww&ixlib=rb-4.1.0&q=85",
+      "alt": "Wooden letters on a table for kids learning English"
+    },
+    "empty_state_invoices": {
+      "url": "https://images.unsplash.com/photo-1651760680066-db9d32bd0357?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNTl8MHwxfHNlYXJjaHwxfHxlbXB0eSUyMGNsaXBib2FyZCUyMGRlc2t8ZW58MHx8fHwxNzkxNTQxNzAyfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "An empty white clipboard on a desk"
+    }
+  },
+  "haptics": {
+    "button_press": "impactLight",
+    "tab_switch": "selection",
+    "toggle_attendance": "impactMedium",
+    "mark_paid": "notificationSuccess",
+    "error": "notificationError"
+  },
+  "instructions_to_main_agent": [
+    "Adhere strictly to the iOS-Native Clean personality. Use generous padding, highly legible 'Plus Jakarta Sans' fonts with a maximum weight of 500, and ensure all interactive touch targets are at least 44x44pt.",
+    "BANNED COLORS: Do not use any blue, purple, indigo, orange, or terracotta. The primary brand color is a bright, fresh green (#22C55E). The secondary tone is a warm gray or muted neutral. Keep the UI bright ('cerah') through ample white space and vibrant green accents.",
+    "Role-based Navigation: Implement dynamic rendering based on role (Guru vs Keuangan). Teachers focus on 'Presensi', while Finance focuses on 'Tagihan'.",
+    "Attendance Toggles: Use a segmented control inline for each student with clear labels (Hadir, Izin, Alpha, Pengganti). Ensure the UI instantly reflects state changes and uses haptic feedback (`impactMedium`).",
+    "Credit Logic UI: Display the 'Sisa Kredit' (Remaining Credits) prominently next to the student's name during attendance taking so teachers can see when a student is at 0.",
+    "Billing CTA: The invoice detail must feature a prominent, sticky primary button for 'Tandai Lunas' (Mark Paid) anchored to the bottom using KeyboardAvoidingView and safe area padding. Below or beside it, include a 'Kirim Tagihan via WA' (WhatsApp) button.",
+    "Image Scrims: When displaying the Gymnastics or English class hero images with text overlaid, you MUST use a top-to-bottom linear gradient scrim (transparent to surfaceInverse) to guarantee WCAG text readability.",
+    "Use standard UI state handlers: Ensure every screen has Flex: 1 and explicitly implements Loading, Empty, and Error states gracefully."
+  ]
+}
