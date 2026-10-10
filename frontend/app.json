@@ -45,7 +45,8 @@
           "photosPermission": "Lampirkan foto bukti transfer pada tagihan",
           "cameraPermission": false
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,13 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/src/api";
+import { notify } from "@/src/components/header";
 import { Badge, CenterState, radius, Segmented, space, Txt } from "@/src/components/ui";
-import { programLabel, rupiah, shortDateTime } from "@/src/format";
+import { daysSince, programLabel, reminderMessage, rupiah, sendWhatsApp, shortDateTime } from "@/src/format";
+import type { InvoiceOut } from "@/src/types";
 import { makeStyles, useTheme } from "@/src/theme";
 
 export default function Tagihan() {
@@ -16,6 +18,16 @@ export default function Tagihan() {
   const insets = useSafeAreaInsets();
   const [status, setStatus] = useState<"unpaid" | "paid">("unpaid");
   const q = useQuery({ queryKey: ["invoices", status], queryFn: () => api.invoices(status) });
+  const qc = useQueryClient();
+  const remind = async (inv: InvoiceOut) => {
+    try {
+      await sendWhatsApp(inv.parent_phone, reminderMessage(inv));
+      await api.remindInvoice(inv.id);
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+    } catch (e) {
+      notify("Gagal", e instanceof Error ? e.message : "Tidak bisa membuka WhatsApp");
+    }
+  };
 
   return (
     <View style={styles.root}>
@@ -45,11 +57,14 @@ export default function Tagihan() {
           ListEmptyComponent={
             <CenterState kind="empty" message={status === "unpaid" ? "Semua tagihan sudah lunas" : "Belum ada pembayaran"} />
           }
-          renderItem={({ item }) => (
+          renderItem={({ item }) => {
+            const age = daysSince(item.created_at);
+            const overdue = item.status === "unpaid" && age >= 3;
+            return (
             <Pressable
               testID={`invoice-row-${item.id}`}
               onPress={() => router.push(`/invoice/${item.id}`)}
-              style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [styles.row, overdue && { borderColor: colors.error }, pressed && { opacity: 0.85 }]}
             >
               <View style={{ flex: 1, gap: 2 }}>
                 <Txt variant="label">{item.student_name}</Txt>
@@ -57,10 +72,24 @@ export default function Tagihan() {
                   {programLabel(item.program)} · {item.package} pertemuan · {shortDateTime(item.created_at)}
                 </Txt>
                 <Txt variant="heading" style={{ marginTop: 4 }}>{rupiah(item.amount)}</Txt>
+                {item.status === "unpaid" && (
+                  <Txt variant="caption" testID={`invoice-age-${item.id}`} style={overdue ? { color: colors.error } : undefined}>
+                    {age} hari{item.reminder_count ? ` · diingatkan ${item.reminder_count}x (${shortDateTime(item.reminded_at!)})` : ""}
+                  </Txt>
+                )}
               </View>
-              <Badge label={item.status === "paid" ? "Lunas" : "Belum Bayar"} tone={item.status === "paid" ? "brand" : "error"} />
+              <View style={{ alignItems: "flex-end", gap: space.sm }}>
+                <Badge label={item.status === "paid" ? "Lunas" : overdue ? "Lewat 3 hari" : "Belum Bayar"} tone={item.status === "paid" ? "brand" : overdue ? "error" : "warning"} />
+                {overdue && !!item.parent_phone && (
+                  <Pressable testID={`remind-invoice-${item.id}`} onPress={() => remind(item)} style={styles.remindBtn} hitSlop={6}>
+                    <Ionicons name="logo-whatsapp" size={16} color={colors.onWhatsapp} />
+                    <Txt variant="label" style={{ color: colors.onWhatsapp, fontSize: 13 }}>Ingatkan</Txt>
+                  </Pressable>
+                )}
+              </View>
             </Pressable>
-          )}
+            );
+          }}
         />
       )}
     </View>
@@ -74,5 +103,9 @@ const useStyles = makeStyles((c) => ({
   row: {
     flexDirection: "row", alignItems: "center", gap: space.md, padding: space.lg, backgroundColor: c.surface,
     borderRadius: radius.md, borderWidth: 1, borderColor: c.border,
+  },
+  remindBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: c.whatsapp, borderRadius: radius.pill,
+    paddingHorizontal: space.md, minHeight: 36,
   },
 }));

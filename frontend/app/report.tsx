@@ -1,13 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Share, View } from "react-native";
+import { Platform, Pressable, RefreshControl, ScrollView, Share, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/src/api";
-import { ScreenHeader } from "@/src/components/header";
+import { notify, ScreenHeader } from "@/src/components/header";
 import { Button, Card, CenterState, radius, space, Txt } from "@/src/components/ui";
-import { monthLabel, programLabel, reportMessage, rupiah, shiftMonth, todayISO } from "@/src/format";
+import { monthLabel, programLabel, reportHtml, reportMessage, rupiah, shiftMonth, todayISO } from "@/src/format";
 import { makeStyles, useTheme } from "@/src/theme";
 
 export default function Report() {
@@ -18,6 +20,28 @@ export default function Report() {
   const q = useQuery({ queryKey: ["report", month], queryFn: () => api.monthlyReport(month) });
 
   const share = () => q.data && Share.share({ message: reportMessage(q.data) }).catch(() => {});
+  const [exporting, setExporting] = useState(false);
+  const exportPdf = async () => {
+    if (!q.data) return;
+    setExporting(true);
+    try {
+      const html = reportHtml(q.data);
+      if (Platform.OS === "web") {
+        await Print.printAsync({ html });
+      } else {
+        const { uri } = await Print.printToFileAsync({ html });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: `Laporan ${monthLabel(month)}`, UTI: "com.adobe.pdf" });
+        } else {
+          notify("PDF dibuat", uri);
+        }
+      }
+    } catch (e) {
+      notify("Gagal ekspor", e instanceof Error ? e.message : "Coba lagi");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <View style={styles.root}>
@@ -82,7 +106,8 @@ export default function Report() {
             </View>
           ))}
 
-          <Button testID="share-report-button" title="Bagikan Laporan" icon="share-outline" onPress={share} style={{ marginTop: space.sm }} />
+          <Button testID="export-pdf-button" title="Ekspor PDF" icon="document-text-outline" onPress={exportPdf} loading={exporting} style={{ marginTop: space.sm }} />
+          <Button testID="share-report-button" title="Bagikan sebagai Teks" icon="share-outline" variant="secondary" onPress={share} />
         </ScrollView>
       )}
     </View>

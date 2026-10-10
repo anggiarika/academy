@@ -7,7 +7,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from core import PACKAGES, FinanceUser, db, user_from_token
+from core import PACKAGES, AnyUser, FinanceUser, db, user_from_token
 from models import InvoiceOut
 from storage import APP_NAME, get_object, put_object
 
@@ -17,6 +17,42 @@ MAX_RECEIPT_BYTES = 8 * 1024 * 1024
 
 class PackageChange(BaseModel):
     package: Literal[4, 12]
+
+
+@router.post("/invoices/{invoice_id}/remind", response_model=InvoiceOut)
+async def remind_invoice(invoice_id: str, _: FinanceUser):
+    res = await db.invoices.update_one(
+        {"id": invoice_id, "status": "unpaid"},
+        {"$set": {"reminded_at": datetime.now(timezone.utc)}, "$inc": {"reminder_count": 1}},
+    )
+    if not res.matched_count:
+        raise HTTPException(404, "Tagihan tidak ditemukan atau sudah lunas")
+    return await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+
+
+class StudentAttendanceItem(BaseModel):
+    date: str
+    class_id: str
+    class_name: str
+    program: str
+    status: str
+
+
+@router.get("/students/{student_id}/attendance", response_model=List[StudentAttendanceItem])
+async def student_attendance(student_id: str, _: AnyUser, month: str = Query(..., pattern=r"^\d{4}-\d{2}$")):
+    classes = {c["id"]: c for c in await db.classes.find({}, {"_id": 0}).to_list(100)}
+    docs = await db.attendance.find(
+        {"date": {"$regex": f"^{month}"}, "records.student_id": student_id}, {"_id": 0}
+    ).sort("date", 1).to_list(1000)
+    items = []
+    for d in docs:
+        c = classes.get(d["class_id"], {"name": "-", "program": "-"})
+        for r in d["records"]:
+            if r["student_id"] == student_id:
+                items.append(StudentAttendanceItem(
+                    date=d["date"], class_id=d["class_id"], class_name=c["name"], program=c["program"], status=r["status"],
+                ))
+    return items
 
 
 @router.post("/invoices/{invoice_id}/package", response_model=InvoiceOut)

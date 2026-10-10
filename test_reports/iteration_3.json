@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 3 (Ganti Password + Rekap Siswa + Export PDF + Pengingat Tagihan) tested end-to-end. Backend: 12/12 pytest cases in test_iter3.py pass — change-password (wrong old 400, short new 422, same password 400, success + login flip + RESTORE); student attendance recap (setup via /classes/{id}/attendance, success returns [{date,class_id,class_name,program,status}], invalid month 422); invoice remind (success increments reminder_count & sets reminded_at, double-remind increments again, unknown id 404, paid invoice 404, guru 403, InvoiceOut carries reminded_at/reminder_count). Frontend (390x844): Beranda change-password-nav-button navigates to /password; old/new/confirm inputs + submit button render; password-error-text shows 'Password baru minimal 8 karakter' and 'Konfirmasi password tidak sama' at the right moments. /report shows export-pdf-button and share-report-button next to the income/attendance cards (web print path not invoked to avoid print dialog). Student detail renders student-recap-card with recap-prev-month/recap-next-month arrows, recap-month-text updating (Oktober 2026 -> September 2026), recap-count-hadir/izin/alpha/pengganti all present with counts, and send-recap-whatsapp-button visible when parent_phone exists. Tagihan tab shows invoice-age-{id} for every unpaid row; after seeding created_at = now-4d in Mongo for 2 unpaid invoices, 'Lewat 3 hari' badge and remind-invoice-{id} WhatsApp button appear on both rows with red border styling. Seeded guru1234 / keuangan123 passwords verified intact after the restore step. No new deprecated expo packages introduced; only the existing non-blocking RN-web 'shadow* style props' warning from iter 2 persists.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter3.py",
+    "/app/test_reports/pytest/iter3_results.xml"
+  ],
+  "action_items": [
+    "(Optional, cosmetic) Still a RN-web console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Carried over from iter 2; likely 3rd-party. No fix required."
+  ],
+  "critical_code_review_comments": [
+    "routers/auth.py change_password: fetches identity from JWT (never trusts the client), uses run_in_threadpool for bcrypt verify/hash, enforces old-vs-new difference, and uses Field(min_length=8) for 422 on short new password. Clean and correct.",
+    "routers/extras.py remind_invoice: single conditional update_one with filter {status:'unpaid'} + $set reminded_at + $inc reminder_count is atomic and idempotent; returns 404 for both unknown and already-paid cases (acceptable, matches spec).",
+    "routers/extras.py student_attendance: $regex ^YYYY-MM scan of attendance.date combined with records.student_id prefilter is OK at seed scale; could switch to range query ($gte/$lt) if the collection grows large, but not required now.",
+    "frontend/app/password.tsx: proper client-side guards (tooShort, mismatch) disable the submit button; mutation surfaces server error via notify. All testIDs present.",
+    "frontend/app/(tabs)/tagihan.tsx: daysSince + overdue check in render keeps logic colocated; remind() awaits sendWhatsApp first so the backend reminder_count only increments after the UI opens WhatsApp — nice ordering. Minor nit: if sendWhatsApp fails the invalidateQueries never runs, which is fine.",
+    "frontend/app/student/[id].tsx recap card uses the new api.studentAttendance query keyed on [id, month]; counts are computed client-side from the array which is fine for monthly scale."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter3.py (new, 12 tests)"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "100% of in-scope flows"},
+  "seed_data_creation": "Tests created TEST_-prefixed students/invoices and attendance records. For UI overdue testing, two existing TEST_ unpaid invoices had created_at set to now-4 days via direct Mongo update (collection 'invoices' in db 'test_database'). All TEST_ invoices/students were deleted from Mongo at the end; attendance records with TEST_ student_ids were $pulled from attendance.records. Seeded guru1234 / keuangan123 passwords verified intact via /api/auth/login after the restore step.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend uses POST /invoices/{id}/pay with body {method:'cash'|'transfer'} — DO NOT call it without a body (422). GET /students/{id}/attendance validates month only by regex ^\\d{4}-\\d{2}$ so a 'valid-looking' bad month like 2025-13 still returns 200 with an empty list; use a clearly invalid string ('bad-month') to assert 422. InvoiceOut now has reminded_at (datetime|null) and reminder_count (int, default 0) — any legacy invoice fixtures that lack these fields will still deserialize because Pydantic defaults them. On the UI, the 'Lewat 3 hari' badge + remind-invoice-{id} button only appear when (status==unpaid && daysSince(created_at)>=3 && parent_phone present).",
+  "rca_of_issue": ""
+}

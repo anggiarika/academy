@@ -43,9 +43,14 @@ export default function Beranda() {
             <Badge testID="home-role-badge" label={isFinance ? "Keuangan / Admin" : "Guru"} tone="brand" />
           </View>
         </View>
-        <Pressable testID="logout-button" onPress={signOut} style={styles.iconBtn} hitSlop={8}>
-          <Ionicons name="log-out-outline" size={22} color={colors.onSurfaceTertiary} />
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: space.sm }}>
+          <Pressable testID="change-password-nav-button" onPress={() => router.push("/password")} style={styles.iconBtn} hitSlop={8}>
+            <Ionicons name="key-outline" size={20} color={colors.onSurfaceTertiary} />
+          </Pressable>
+          <Pressable testID="logout-button" onPress={signOut} style={styles.iconBtn} hitSlop={8}>
+            <Ionicons name="log-out-outline" size={22} color={colors.onSurfaceTertiary} />
+          </Pressable>
+        </View>
       </View>
 
       {dash.isLoading ? (

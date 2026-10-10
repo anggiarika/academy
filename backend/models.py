@@ -124,6 +124,8 @@ class InvoiceOut(BaseModel):
     created_at: datetime
     paid_at: Optional[datetime] = None
     receipt_path: Optional[str] = None
+    reminded_at: Optional[datetime] = None
+    reminder_count: int = 0
 
 
 class PackageOut(BaseModel):

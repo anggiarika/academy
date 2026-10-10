@@ -104,6 +104,16 @@ export interface InvoiceOut {
   created_at: string;
   paid_at: string | null;
   receipt_path: string | null;
+  reminded_at: string | null;
+  reminder_count: number;
+}
+
+export interface StudentAttendanceItem {
+  date: string;
+  class_id: string;
+  class_name: string;
+  program: Program;
+  status: AttendanceStatus;
 }
 
 export interface UserCreate {

@@ -1,6 +1,6 @@
 import { Linking } from "react-native";
 
-import type { InvoiceOut, MonthlyReport, Program } from "@/src/types";
+import type { InvoiceOut, MonthlyReport, Program, StudentAttendanceItem, StudentOut } from "@/src/types";
 
 export const PROGRAMS: Program[] = ["gymnastic", "english"];
 
@@ -100,4 +100,54 @@ export function reportMessage(r: MonthlyReport): string {
 export async function sendWhatsApp(phone: string, message: string) {
   const url = `https://wa.me/${normalizePhone(phone)}?text=${encodeURIComponent(message)}`;
   await Linking.openURL(url);
+}
+
+export const daysSince = (iso: string) => Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+
+export function reminderMessage(inv: InvoiceOut): string {
+  return [
+    `Yth. ${inv.parent_name || "Orang Tua/Wali"} dari ${inv.student_name},`,
+    "",
+    `Kami mengingatkan kembali tagihan kelas ${programLabel(inv.program)} (${inv.package} pertemuan) sebesar ${rupiah(inv.amount)} ` +
+      `yang diterbitkan ${shortDateTime(inv.created_at)} dan belum kami terima.`,
+    "Mohon dapat segera melakukan pembayaran agar ananda tetap bisa mengikuti kelas. Terima kasih 🙏",
+  ].join("\n");
+}
+
+const STATUS_LABEL: Record<string, string> = { hadir: "Hadir", izin: "Izin", alpha: "Alpha", pengganti: "Kelas Pengganti" };
+export const statusLabel = (s: string) => STATUS_LABEL[s] ?? s;
+
+export function studentRecapMessage(s: StudentOut, month: string, items: StudentAttendanceItem[]): string {
+  const credits = (Object.keys(s.wallets) as Program[])
+    .map((p) => `• ${programLabel(p)}: sisa ${s.wallets[p]?.credits ?? 0} kredit, ${s.wallets[p]?.makeup ?? 0} kelas pengganti`);
+  return [
+    `Rekap kehadiran ${s.name} – ${monthLabel(month)}`,
+    "",
+    ...(items.length ? items.map((i) => `• ${prettyDate(i.date)} · ${i.class_name}: ${statusLabel(i.status)}`) : ["Belum ada pertemuan bulan ini."]),
+    "",
+    "Sisa kredit:",
+    ...credits,
+  ].join("\n");
+}
+
+export function reportHtml(r: MonthlyReport): string {
+  const rows = r.classes
+    .map((c) => `<tr><td>${c.name}</td><td>${programLabel(c.program)}</td><td>${c.sessions}</td><td>${c.counts.hadir}</td><td>${c.counts.izin}</td><td>${c.counts.alpha}</td><td>${c.counts.pengganti}</td></tr>`)
+    .join("");
+  return `<html><head><meta name="viewport" content="width=device-width, initial-scale=1"/><style>
+  body{font-family:-apple-system,Helvetica,Arial,sans-serif;color:#111827;padding:24px}
+  h1{font-size:22px;margin:0 0 4px} h2{font-size:16px;margin:24px 0 8px} .muted{color:#6B7280}
+  .box{display:inline-block;border:1px solid #E5E7EB;border-radius:12px;padding:12px 16px;margin:0 8px 8px 0}
+  .big{font-size:20px;font-weight:600} table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{border-bottom:1px solid #E5E7EB;padding:8px;text-align:left} th{background:#DCFCE7;color:#166534}
+  </style></head><body>
+  <h1>Laporan Bulanan</h1><div class="muted">${monthLabel(r.month)}</div>
+  <h2>Pemasukan</h2>
+  <div class="box"><div class="muted">Total (${r.income_count} pembayaran)</div><div class="big">${rupiah(r.income_total)}</div></div>
+  <div class="box"><div class="muted">Gymnastic</div><div class="big">${rupiah(r.income_by_program.gymnastic ?? 0)}</div></div>
+  <div class="box"><div class="muted">English</div><div class="big">${rupiah(r.income_by_program.english ?? 0)}</div></div>
+  <div class="box"><div class="muted">Piutang belum dibayar</div><div class="big">${rupiah(r.unpaid_total)}</div></div>
+  <h2>Kehadiran per Kelas</h2>
+  <table><tr><th>Kelas</th><th>Program</th><th>Pertemuan</th><th>Hadir</th><th>Izin</th><th>Alpha</th><th>Pengganti</th></tr>${rows}</table>
+  </body></html>`;
 }

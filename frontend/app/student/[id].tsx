@@ -10,7 +10,7 @@ import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
 import { confirmAction, notify, ScreenHeader } from "@/src/components/header";
 import { Badge, Button, Card, CenterState, creditTone, radius, space, Txt, useInputStyle } from "@/src/components/ui";
-import { programLabel, sendWhatsApp, shortDateTime, todayISO } from "@/src/format";
+import { monthLabel, programLabel, sendWhatsApp, shiftMonth, shortDateTime, statusLabel, studentRecapMessage, todayISO } from "@/src/format";
 import type { Program } from "@/src/types";
 import { makeStyles, useTheme } from "@/src/theme";
 
@@ -30,6 +30,8 @@ export default function StudentDetail() {
   const s = useQuery({ queryKey: ["student", id], queryFn: () => api.student(id) });
   const classes = useQuery({ queryKey: ["classes"], queryFn: api.classes });
   const tx = useQuery({ queryKey: ["transactions", id], queryFn: () => api.transactions(id) });
+  const [month, setMonth] = useState(todayISO().slice(0, 7));
+  const recap = useQuery({ queryKey: ["student-attendance", id, month], queryFn: () => api.studentAttendance(id, month) });
 
   const izin = useMutation({
     mutationFn: (program: Program) => api.recordIzin(id, { program, date: izinDate, note: izinNote }),
@@ -158,6 +160,47 @@ export default function StudentDetail() {
           );
         })}
 
+        <Card testID="student-recap-card" style={{ gap: space.md }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+            <Pressable testID="recap-prev-month" style={styles.iconBtn} onPress={() => setMonth(shiftMonth(month, -1))}>
+              <Ionicons name="chevron-back" size={18} color={colors.onSurface} />
+            </Pressable>
+            <View style={{ flex: 1, alignItems: "center" }}>
+              <Txt variant="caption">Rekap Kehadiran</Txt>
+              <Txt variant="label" testID="recap-month-text">{monthLabel(month)}</Txt>
+            </View>
+            <Pressable testID="recap-next-month" style={styles.iconBtn} onPress={() => setMonth(shiftMonth(month, 1))}>
+              <Ionicons name="chevron-forward" size={18} color={colors.onSurface} />
+            </Pressable>
+          </View>
+          {recap.data && (
+            <View style={{ flexDirection: "row", gap: space.xs }}>
+              {(["hadir", "izin", "alpha", "pengganti"] as const).map((k) => (
+                <View key={k} style={styles.recapCount} testID={`recap-count-${k}`}>
+                  <Txt variant="heading">{recap.data.filter((i) => i.status === k).length}</Txt>
+                  <Txt variant="caption">{k === "pengganti" ? "Pengganti" : statusLabel(k)}</Txt>
+                </View>
+              ))}
+            </View>
+          )}
+          {recap.data?.length === 0 && <Txt variant="caption">Belum ada pertemuan di bulan ini.</Txt>}
+          {recap.data?.map((i) => (
+            <View key={`${i.date}-${i.class_id}`} style={styles.recapRow}>
+              <Txt variant="body" style={{ flex: 1 }}>{shortDateTime(i.date)} · {i.class_name}</Txt>
+              <Badge label={statusLabel(i.status)} tone={i.status === "hadir" ? "brand" : i.status === "alpha" ? "error" : i.status === "izin" ? "warning" : "neutral"} />
+            </View>
+          ))}
+          {!!st.parent_phone && recap.data && (
+            <Button
+              testID="send-recap-whatsapp-button"
+              title="Kirim Rekap ke Orang Tua"
+              icon="logo-whatsapp"
+              variant="whatsapp"
+              onPress={() => sendWhatsApp(st.parent_phone, studentRecapMessage(st, month, recap.data))}
+            />
+          )}
+        </Card>
+
         <Txt variant="heading" style={{ marginTop: space.md }}>Riwayat</Txt>
         {tx.data?.length === 0 && <Txt variant="caption">Belum ada riwayat</Txt>}
         {tx.data?.map((t) => (
@@ -195,6 +238,8 @@ const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surfaceSecondary },
   iconBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surfaceTertiary, alignItems: "center", justifyContent: "center" },
   statsRow: { flexDirection: "row", gap: space.sm },
+  recapCount: { flex: 1, alignItems: "center", backgroundColor: c.surfaceTertiary, borderRadius: radius.sm, paddingVertical: space.sm },
+  recapRow: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: 4 },
   stat: { flex: 1, backgroundColor: c.surfaceTertiary, borderRadius: radius.md, padding: space.md },
   txRow: {
     flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.md, backgroundColor: c.surface,

@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import { storage } from "@/src/utils/storage";
 import type {
   AttendanceIn, AttendanceOut, ClassOut, ClassUpdate, DashboardOut, InvoiceIn, InvoiceOut,
-  IzinIn, MonthlyReport, PackageOut, StudentIn, StudentOut, TokenOut, TransactionOut, UserCreate, UserOut,
+  IzinIn, MonthlyReport, PackageOut, StudentAttendanceItem, StudentIn, StudentOut, TokenOut, TransactionOut, UserCreate, UserOut,
 } from "@/src/types";
 
 const BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
@@ -84,6 +84,11 @@ async function uploadReceipt(invoiceId: string, uri: string, name: string, type:
 export const api = {
   login: (email: string, password: string) => post<TokenOut>("/auth/login", { email, password }),
   me: () => request<UserOut>("/auth/me"),
+  changePassword: (old_password: string, new_password: string) =>
+    post<{ ok: boolean }>("/auth/change-password", { old_password, new_password }),
+  studentAttendance: (id: string, month: string) =>
+    request<StudentAttendanceItem[]>(`/students/${id}/attendance?month=${month}`),
+  remindInvoice: (id: string) => post<InvoiceOut>(`/invoices/${id}/remind`, {}),
 
   dashboard: () => request<DashboardOut>("/dashboard"),
   packages: () => request<PackageOut[]>("/packages"),
