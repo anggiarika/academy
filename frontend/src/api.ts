@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import { storage } from "@/src/utils/storage";
 import type {
   AttendanceIn, AttendanceOut, ClassOut, ClassUpdate, DashboardOut, InvoiceIn, InvoiceOut,
-  IzinIn, MonthlyReport, PackageOut, StudentAttendanceItem, StudentIn, StudentOut, TokenOut, TransactionOut, TrendPoint, UserCreate, UserOut,
+  IzinIn, MonthlyReport, PackageOut, SettingsOut, StudentAttendanceItem, StudentIn, StudentOut, TokenOut, TransactionOut, TrendPoint, UserCreate, UserOut,
 } from "@/src/types";
 
 const BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
@@ -28,6 +28,8 @@ export function setUnauthorizedHandler(fn: () => void) {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  // After a page reload the token isn't in memory yet — load it from secure storage first.
+  if (token === null) await loadToken();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${BASE}${path}`, { ...init, headers });
@@ -57,7 +59,12 @@ export function fileSource(path: string) {
     : { uri, headers: { Authorization: `Bearer ${token ?? ""}` } };
 }
 
-async function uploadReceipt(invoiceId: string, uri: string, name: string, type: string): Promise<InvoiceOut> {
+// Plain URL with token in the query, for <img> inside generated print/PDF HTML.
+export function fileUri(path: string) {
+  return `${BASE}/files/${path}?token=${encodeURIComponent(token ?? "")}`;
+}
+
+async function uploadImage(path: string, uri: string, name: string, type: string): Promise<Response> {
   const form = new FormData();
   if (Platform.OS === "web") {
     const blob = await (await fetch(uri)).blob();
@@ -65,7 +72,7 @@ async function uploadReceipt(invoiceId: string, uri: string, name: string, type:
   } else {
     form.append("file", { uri, name, type } as unknown as Blob);
   }
-  const res = await fetch(`${BASE}/invoices/${invoiceId}/receipt`, {
+  const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token ?? ""}` },
     body: form,
@@ -78,6 +85,11 @@ async function uploadReceipt(invoiceId: string, uri: string, name: string, type:
     } catch {}
     throw new Error(msg);
   }
+  return res;
+}
+
+async function uploadReceipt(invoiceId: string, uri: string, name: string, type: string): Promise<InvoiceOut> {
+  const res = await uploadImage(`/invoices/${invoiceId}/receipt`, uri, name, type);
   return res.json();
 }
 
@@ -132,4 +144,9 @@ export const api = {
 
   monthlyReport: (month: string) => request<MonthlyReport>(`/reports/monthly?month=${month}`),
   incomeTrend: () => request<TrendPoint[]>("/reports/trend?months=6"),
+
+  settings: () => request<SettingsOut>("/settings"),
+  updateSettings: (school_name: string) => put<SettingsOut>("/settings", { school_name }),
+  uploadLogo: async (uri: string, name: string, type: string): Promise<SettingsOut> =>
+    (await uploadImage("/settings/logo", uri, name, type)).json(),
 };

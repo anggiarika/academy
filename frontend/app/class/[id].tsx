@@ -10,6 +10,7 @@ import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
 import { notify, ScreenHeader } from "@/src/components/header";
 import { QrScanner } from "@/src/components/qr-scanner";
+import { useBranding } from "@/src/branding";
 import { exportPdf, qrSheetHtml } from "@/src/pdf";
 import { Badge, Button, CenterState, creditTone, fonts, radius, space, Txt, useInputStyle } from "@/src/components/ui";
 import { prettyDate, programLabel, shiftDate, todayISO } from "@/src/format";
@@ -78,6 +79,7 @@ export default function ClassAttendance() {
   };
   const [scanning, setScanning] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const brand = useBranding();
   const printCards = async () => {
     if (!cls.data || !students.data?.length) {
       notify("Belum ada siswa", "Tambahkan siswa ke kelas ini terlebih dahulu.");
@@ -85,7 +87,7 @@ export default function ClassAttendance() {
     }
     setPrinting(true);
     try {
-      await exportPdf(await qrSheetHtml(cls.data, students.data), `Kartu QR ${cls.data.name}`);
+      await exportPdf(await qrSheetHtml(cls.data, students.data, brand), `Kartu QR ${cls.data.name}`);
     } catch (e) {
       notify("Gagal mencetak", e instanceof Error ? e.message : "Coba lagi");
     } finally {

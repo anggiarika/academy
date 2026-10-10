@@ -8,6 +8,7 @@ import { api } from "@/src/api";
 import { notify, ScreenHeader } from "@/src/components/header";
 import { Button, Card, CenterState, radius, space, Txt } from "@/src/components/ui";
 import { monthLabel, programLabel, reportHtml, reportMessage, rupiah, shiftMonth, todayISO } from "@/src/format";
+import { useBranding } from "@/src/branding";
 import { exportPdf as savePdf } from "@/src/pdf";
 import { makeStyles, useTheme } from "@/src/theme";
 
@@ -20,11 +21,12 @@ export default function Report() {
 
   const share = () => q.data && Share.share({ message: reportMessage(q.data) }).catch(() => {});
   const [exporting, setExporting] = useState(false);
+  const brand = useBranding();
   const exportPdf = async () => {
     if (!q.data) return;
     setExporting(true);
     try {
-      const html = reportHtml(q.data);
+      const html = reportHtml(q.data, brand);
       await savePdf(html, `Laporan ${monthLabel(month)}`);
     } catch (e) {
       notify("Gagal ekspor", e instanceof Error ? e.message : "Coba lagi");

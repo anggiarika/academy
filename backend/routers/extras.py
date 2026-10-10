@@ -98,7 +98,8 @@ async def download_file(path: str, token: Optional[str] = Query(None), authoriza
     if not raw:
         raise HTTPException(401, "Butuh login")
     user = await user_from_token(raw)
-    if user["role"] != "keuangan":
+    # Keuangan can read everything; other roles only the school logo (used on printed QR cards).
+    if user["role"] != "keuangan" and not path.startswith(f"{APP_NAME}/logo/"):
         raise HTTPException(403, "Akses ditolak")
     record = await db.files.find_one({"path": path}, {"_id": 0})
     if not record:

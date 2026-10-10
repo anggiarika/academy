@@ -5,7 +5,7 @@ from fastapi import APIRouter, FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from core import client, db, new_id, now_utc, passwords
-from routers import auth, extras, finance, school, users
+from routers import auth, extras, finance, school, settings, users
 from storage import init_storage
 
 app = FastAPI()
@@ -21,6 +21,7 @@ api_router.include_router(auth.router)
 api_router.include_router(school.router)
 api_router.include_router(finance.router)
 api_router.include_router(users.router)
+api_router.include_router(settings.router)
 api_router.include_router(extras.router)
 app.include_router(api_router)
 

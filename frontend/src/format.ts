@@ -32,6 +32,8 @@ export function shiftDate(iso: string, days: number): string {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 
+const escHtml = (s: string) => s.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]!);
+
 export function prettyDate(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   const dt = new Date(y, m - 1, d);
@@ -130,7 +132,11 @@ export function studentRecapMessage(s: StudentOut, month: string, items: Student
   ].join("\n");
 }
 
-export function reportHtml(r: MonthlyReport): string {
+export function reportHtml(r: MonthlyReport, brand?: { name: string; logo: string | null }): string {
+  const header = brand?.logo
+    ? `<div style="text-align:center;margin-bottom:8px"><img src="${brand.logo}" style="height:48px" onerror="this.remove()"/></div>`
+    : "";
+  const title = brand?.name ? escHtml(brand.name) + " – Laporan Bulanan" : "Laporan Bulanan";
   const rows = r.classes
     .map((c) => `<tr><td>${c.name}</td><td>${programLabel(c.program)}</td><td>${c.sessions}</td><td>${c.counts.hadir}</td><td>${c.counts.izin}</td><td>${c.counts.alpha}</td><td>${c.counts.pengganti}</td></tr>`)
     .join("");
@@ -141,7 +147,8 @@ export function reportHtml(r: MonthlyReport): string {
   .big{font-size:20px;font-weight:600} table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{border-bottom:1px solid #E5E7EB;padding:8px;text-align:left} th{background:#DCFCE7;color:#166534}
   </style></head><body>
-  <h1>Laporan Bulanan</h1><div class="muted">${monthLabel(r.month)}</div>
+  ${header}
+  <h1>${title}</h1><div class="muted">${monthLabel(r.month)}</div>
   <h2>Pemasukan</h2>
   <div class="box"><div class="muted">Total (${r.income_count} pembayaran)</div><div class="big">${rupiah(r.income_total)}</div></div>
   <div class="box"><div class="muted">Gymnastic</div><div class="big">${rupiah(r.income_by_program.gymnastic ?? 0)}</div></div>
@@ -158,8 +165,9 @@ export function isScheduledToday(schedule: string): boolean {
   return schedule.toLowerCase().includes(today);
 }
 
-export function receiptMessage(inv: InvoiceOut, creditsNow: number): string {
+export function receiptMessage(inv: InvoiceOut, creditsNow: number, schoolName = ""): string {
   return [
+    ...(schoolName ? [schoolName] : []),
     `Yth. ${inv.parent_name || "Orang Tua/Wali"} dari ${inv.student_name},`,
     "",
     "Terima kasih, pembayaran Anda sudah kami terima ✅",

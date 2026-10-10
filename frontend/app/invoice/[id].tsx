@@ -8,6 +8,7 @@ import { Linking, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api, fileSource } from "@/src/api";
+import { useBranding } from "@/src/branding";
 import { confirmAction, notify, ScreenHeader } from "@/src/components/header";
 import { Badge, Button, Card, CenterState, radius, Segmented, space, Txt } from "@/src/components/ui";
 import { invoiceMessage, PRICES, programLabel, receiptMessage, rupiah, sendWhatsApp, shortDateTime, upgradeSavings } from "@/src/format";
@@ -21,6 +22,7 @@ export default function InvoiceDetail() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [method, setMethod] = useState<"transfer" | "tunai">("transfer");
+  const brand = useBranding();
   const q = useQuery({ queryKey: ["invoice", id], queryFn: () => api.invoice(id) });
 
   const pay = useMutation({
@@ -41,7 +43,7 @@ export default function InvoiceDetail() {
   const sendReceipt = async (inv: InvoiceOut) => {
     try {
       const student = await api.student(inv.student_id);
-      await sendWhatsApp(inv.parent_phone, receiptMessage(inv, student.wallets[inv.program]?.credits ?? inv.package));
+      await sendWhatsApp(inv.parent_phone, receiptMessage(inv, student.wallets[inv.program]?.credits ?? inv.package, brand.name));
     } catch {
       notify("Lunas", "Pembayaran tercatat. Tekan 'Kirim Tanda Terima via WA' untuk mengirim ke orang tua.");
     }

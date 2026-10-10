@@ -88,6 +88,7 @@ export default function Beranda() {
               {([
                 ["report", "Laporan Bulanan", "bar-chart-outline", "/report"],
                 ["users", "Kelola Akun", "people-circle-outline", "/users"],
+                ["settings", "Logo & Nama", "business-outline", "/settings"],
               ] as const).map(([key, label, icon, href]) => (
                 <Pressable
                   key={key}
@@ -225,9 +226,9 @@ const useStyles = makeStyles((c) => ({
     flexDirection: "row", alignItems: "center", gap: space.md, padding: space.lg, minHeight: 64,
     backgroundColor: c.brandPrimary, borderRadius: radius.md, marginBottom: space.sm,
   },
-  actions: { flexDirection: "row", gap: space.md, marginTop: space.md },
+  actions: { flexDirection: "row", flexWrap: "wrap", gap: space.md, marginTop: space.md },
   action: {
-    flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.md, minHeight: 52,
+    flexBasis: "47.8%", flexGrow: 1, flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.md, minHeight: 52,
     backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border,
   },
 }));

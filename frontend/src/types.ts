@@ -108,6 +108,11 @@ export interface InvoiceOut {
   reminder_count: number;
 }
 
+export interface SettingsOut {
+  school_name: string;
+  logo_path: string | null;
+}
+
 export interface TrendPoint {
   month: string;
   income: number;

@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 7 (Logo & Nama Lembaga branding) fully verified. Backend 15/15 pytest pass: GET /api/settings readable by both roles (no _id), PUT keuangan sets+persists school_name, guru PUT 403, >120 chars 422, POST /api/settings/logo multipart image sets logo_path under presensi-kredit/logo/ (persisted on GET), non-image 400, guru upload 403, guru downloads logo via ?token= (200, image/*) and via Bearer header (200), guru receipt download 403, keuangan receipt 200, no-token 401. Frontend (390x844): home-action-settings -> /settings shows logo-card with school-logo-preview, upload-logo-button (web file chooser works, upload sets logo_path and preview updates), school-name-input + save-school-name-button persist name; class print-qr-cards-button triggers window.print; /report export-pdf-button triggers window.print; paid invoice send-receipt-whatsapp-button opens wa.me whose text first line equals the school name. School name restored to 'Ganesha Gymnastic & English Club' after tests.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Console warning persists: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' (carried over from iteration 6, still unfixed). Reference: /app/frontend/src/components/ui.tsx or theme files."},
+      {"component": "auth race on deep-link reload", "issue": "Hard-reloading a Stack screen outside (tabs), e.g. /invoice/[id], fires useQuery before AuthProvider.loadToken() completes -> request goes out without token -> 401 'Not authenticated' error screen with retry. In-app navigation is unaffected. Minor web-preview-only issue; consider gating Stack screens on auth `ready` or enabling query retry after token load. Reference: /app/frontend/src/auth.tsx:21-34 and /app/frontend/app/invoice/[id].tsx:26."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter7_settings.py",
+    "/app/test_reports/pytest/iter7_results.xml"
+  ],
+  "action_items": [
+    "Optional: migrate deprecated shadow* style props to boxShadow (still pending from iteration 6).",
+    "Optional: fix auth race on full reload of deep Stack routes (invoice detail shows 'Not authenticated' until retry)."
+  ],
+  "critical_code_review_comments": [
+    "settings.py: role gating correct (AnyUser read, FinanceUser write/logo); content-type checked before read; 8MB cap; 402 quota mapped; _id excluded via projection.",
+    "extras.py /files: guru restricted to paths starting with 'presensi-kredit/logo/' — receipt access correctly 403; token accepted via query param for <img> in print/PDF HTML and WhatsApp contexts; Cache-Control private max-age=86400 set.",
+    "api.ts uploadImage on web converts uri->blob and appends as 'file' — works with file chooser; note: requests-style Content-Type override bug only affected my pytest session (session-level application/json header suppresses multipart boundary), not app code.",
+    "branding/pdf: print HTML uses tokenized fileUri for logo img with onerror removal fallback — safe when token expires.",
+    "expo-print web printAsync ignores generated HTML and calls window.print() of the current page — meaning on web the QR sheet / PDF report print the app page, not the generated HTML document. This is an expo-print web limitation (ExponentPrint.web.js only calls window.print()); native builds will print correct HTML. Flagging so main agent is aware web preview can't fully validate the branded PDF/QR output."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter7_settings.py (new, 15 tests)"
+  ],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% (16/16 UI steps across 3 runs)"},
+  "seed_data_creation": "Test uploaded a 1x1 red PNG as school logo (current logo_path: presensi-kredit/logo/9e060d33-5f58-444b-8795-d68ca8851e5b.png — agent note said overwriting placeholder is fine; replace with a real logo if desired). Test also attached a test receipt PNG to Aisyah Putri's paid invoice dadea8ad-c83d-48d1-855d-6997c9e489b5 (needed to exercise guru->receipt 403 path; no receipt existed). School name restored to 'Ganesha Gymnastic & English Club'.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "conftest.py fixtures (kc/gc sessions) work; when posting multipart via these sessions pass headers={'Content-Type': None} to avoid 422 (session-level JSON content-type suppresses multipart boundary). Browser context does NOT persist between browser_automation runs — always login first. Navigate in-app (tabs/rows) instead of page.goto deep links due to the auth race on hard reload. window.open/window.print can be spied via page.add_init_script (must re-goto after adding). Segmented option testIDs are '{prefix}-{value}' e.g. invoice-status-paid; tabs use tabBarButtonTestID e.g. tab-presensi.",
+  "rca_of_issue": "Deep-link hard reload 'Not authenticated': AuthProvider loads token asynchronously into a module-level var (src/api.ts) while Stack screens outside (tabs) mount immediately and fire react-query fetches with token=null -> 401. Mitigation: gate rendering on auth ready in root Stack, or set query retry/refetch on token load. Low severity (web preview only, retry button recovers)."
+}
