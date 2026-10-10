@@ -19,6 +19,12 @@ export default function Tagihan() {
   const [status, setStatus] = useState<"unpaid" | "paid">("unpaid");
   const q = useQuery({ queryKey: ["invoices", status], queryFn: () => api.invoices(status) });
   const qc = useQueryClient();
+  // Overdue (>=3 days), has phone, not yet reminded today → bulk queue
+  const pending = (q.data ?? []).filter(
+    (i) =>
+      i.status === "unpaid" && daysSince(i.created_at) >= 3 && !!i.parent_phone &&
+      (!i.reminded_at || new Date(i.reminded_at).toDateString() !== new Date().toDateString()),
+  );
   const remind = async (inv: InvoiceOut) => {
     try {
       await sendWhatsApp(inv.parent_phone, reminderMessage(inv));
@@ -54,6 +60,20 @@ export default function Tagihan() {
           data={q.data}
           keyExtractor={(i) => i.id}
           contentContainerStyle={{ padding: space.lg, gap: space.sm }}
+          ListHeaderComponent={
+            status === "unpaid" && pending.length > 0 ? (
+              <View style={styles.bulk} testID="bulk-reminder-banner">
+                <View style={{ flex: 1 }}>
+                  <Txt variant="label">{pending.length} tagihan lewat 3 hari belum diingatkan hari ini</Txt>
+                  <Txt variant="caption">Berikutnya: {pending[0].student_name}</Txt>
+                </View>
+                <Pressable testID="bulk-remind-next-button" onPress={() => remind(pending[0])} style={styles.remindBtn} hitSlop={6}>
+                  <Ionicons name="logo-whatsapp" size={16} color={colors.onWhatsapp} />
+                  <Txt variant="label" style={{ color: colors.onWhatsapp, fontSize: 13 }}>Ingatkan Berikutnya</Txt>
+                </Pressable>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <CenterState kind="empty" message={status === "unpaid" ? "Semua tagihan sudah lunas" : "Belum ada pembayaran"} />
           }
@@ -107,5 +127,9 @@ const useStyles = makeStyles((c) => ({
   remindBtn: {
     flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: c.whatsapp, borderRadius: radius.pill,
     paddingHorizontal: space.md, minHeight: 36,
+  },
+  bulk: {
+    flexDirection: "row", alignItems: "center", gap: space.md, padding: space.md, marginBottom: space.xs,
+    backgroundColor: c.errorSoft, borderRadius: radius.md,
   },
 }));

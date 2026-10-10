@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
 import { notify, ScreenHeader } from "@/src/components/header";
+import { QrScanner } from "@/src/components/qr-scanner";
 import { Badge, Button, CenterState, creditTone, fonts, radius, space, Txt, useInputStyle } from "@/src/components/ui";
 import { prettyDate, programLabel, shiftDate, todayISO } from "@/src/format";
 import type { AttendanceStatus } from "@/src/types";
@@ -74,6 +75,13 @@ export default function ClassAttendance() {
       return next;
     });
   };
+  const [scanning, setScanning] = useState(false);
+  const onScan = (sid: string) => {
+    const s = students.data?.find((x) => x.id === sid);
+    if (!s) return "Siswa tidak terdaftar di kelas ini";
+    setMarks((m) => ({ ...m, [sid]: "hadir" }));
+    return `✓ ${s.name} ditandai hadir`;
+  };
   const markAllPresent = () => {
     const m: Record<string, AttendanceStatus> = { ...marks };
     students.data?.forEach((s) => { if (!m[s.id]) m[s.id] = "hadir"; });
@@ -84,6 +92,7 @@ export default function ClassAttendance() {
 
   return (
     <View style={styles.root}>
+      <QrScanner visible={scanning} onClose={() => setScanning(false)} onScan={onScan} />
       <ScreenHeader
         title={cls.data?.name ?? "Kelas"}
         subtitle={cls.data ? `${programLabel(cls.data.program)} · ${cls.data.schedule}` : undefined}
@@ -174,8 +183,16 @@ export default function ClassAttendance() {
         />
       )}
 
-      <View style={[styles.sticky, { paddingBottom: insets.bottom + space.md }]}>
+      <View style={[styles.sticky, { paddingBottom: insets.bottom + space.md, flexDirection: "row", gap: space.sm }]}>
         <Button
+          testID="scan-qr-button"
+          title="Scan QR"
+          icon="qr-code-outline"
+          variant="secondary"
+          onPress={() => setScanning(true)}
+        />
+        <Button
+          style={{ flex: 1 }}
           testID="save-attendance-button"
           title={`Simpan Presensi (${count})`}
           icon="checkmark-circle-outline"

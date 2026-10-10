@@ -9,6 +9,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
 import { confirmAction, notify, ScreenHeader } from "@/src/components/header";
+import { QR_PREFIX } from "@/src/components/qr-scanner";
+import QRCode from "react-native-qrcode-svg";
 import { Badge, Button, Card, CenterState, creditTone, radius, space, Txt, useInputStyle } from "@/src/components/ui";
 import { monthLabel, programLabel, sendWhatsApp, shiftMonth, shortDateTime, statusLabel, studentRecapMessage, todayISO } from "@/src/format";
 import type { Program } from "@/src/types";
@@ -93,6 +95,16 @@ export default function StudentDetail() {
               onPress={() => sendWhatsApp(st.parent_phone, `Halo ${st.parent_name}, `)}
             />
           )}
+        </Card>
+
+        <Card testID="student-qr-card" style={{ alignItems: "center", gap: space.sm }}>
+          <Txt variant="label">Kartu QR Presensi</Txt>
+          <View style={styles.qrWrap}>
+            <QRCode value={`${QR_PREFIX}${st.id}`} size={160} color={colors.onSurface} backgroundColor={colors.surface} />
+          </View>
+          <Txt variant="caption" style={{ textAlign: "center" }}>
+            Cetak atau simpan kartu ini. Guru cukup memindainya dari halaman presensi kelas.
+          </Txt>
         </Card>
 
         {(Object.keys(st.wallets) as Program[]).map((p) => {
@@ -238,6 +250,7 @@ const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surfaceSecondary },
   iconBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surfaceTertiary, alignItems: "center", justifyContent: "center" },
   statsRow: { flexDirection: "row", gap: space.sm },
+  qrWrap: { padding: space.md, backgroundColor: c.surface, borderRadius: radius.md, borderWidth: 1, borderColor: c.border },
   recapCount: { flex: 1, alignItems: "center", backgroundColor: c.surfaceTertiary, borderRadius: radius.sm, paddingVertical: space.sm },
   recapRow: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: 4 },
   stat: { flex: 1, backgroundColor: c.surfaceTertiary, borderRadius: radius.md, padding: space.md },

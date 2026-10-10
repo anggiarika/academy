@@ -108,6 +108,12 @@ export interface InvoiceOut {
   reminder_count: number;
 }
 
+export interface TrendPoint {
+  month: string;
+  income: number;
+  count: number;
+}
+
 export interface StudentAttendanceItem {
   date: string;
   class_id: string;

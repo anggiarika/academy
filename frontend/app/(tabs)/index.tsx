@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/src/api";
 import { useAuth } from "@/src/auth";
 import { Badge, Card, CenterState, radius, space, Txt } from "@/src/components/ui";
-import { prettyDate, programLabel, rupiah, todayISO } from "@/src/format";
+import { isScheduledToday, monthLabel, prettyDate, programLabel, rupiah, todayISO } from "@/src/format";
 import { makeStyles, useTheme } from "@/src/theme";
 
 export default function Beranda() {
@@ -19,6 +19,9 @@ export default function Beranda() {
   const isFinance = user?.role === "keuangan";
   const dash = useQuery({ queryKey: ["dashboard"], queryFn: api.dashboard });
   const classes = useQuery({ queryKey: ["classes"], queryFn: api.classes });
+  const trend = useQuery({ queryKey: ["trend"], queryFn: api.incomeTrend, enabled: isFinance });
+  const todayClasses = (classes.data ?? []).filter((c) => isScheduledToday(c.schedule));
+  const maxIncome = Math.max(1, ...(trend.data ?? []).map((t) => t.income));
 
   const stats = dash.data
     ? [
@@ -130,7 +133,57 @@ export default function Beranda() {
         </>
       )}
 
-      <Txt variant="heading" style={{ marginTop: space.xl, marginBottom: space.md }}>Kelas</Txt>
+      {isFinance && trend.data && (
+        <Card testID="income-trend-card" style={{ marginTop: space.xl }}>
+          <Txt variant="heading">Tren Pemasukan</Txt>
+          <Txt variant="caption">6 bulan terakhir</Txt>
+          <View style={styles.chart}>
+            {trend.data.map((t, i) => {
+              const last = i === trend.data.length - 1;
+              return (
+                <View key={t.month} style={styles.barCol} testID={`trend-bar-${t.month}`}>
+                  <Txt variant="caption" style={{ fontSize: 10 }} numberOfLines={1}>
+                    {t.income ? `${(t.income / 1_000_000).toFixed(1)}jt` : "0"}
+                  </Txt>
+                  <View style={styles.barTrack}>
+                    <View
+                      style={[
+                        styles.bar,
+                        { height: `${Math.max(4, (t.income / maxIncome) * 100)}%`, backgroundColor: last ? colors.brandPrimary : colors.brandTertiary },
+                      ]}
+                    />
+                  </View>
+                  <Txt variant="caption" style={{ fontSize: 11 }}>{monthLabel(t.month).slice(0, 3)}</Txt>
+                </View>
+              );
+            })}
+          </View>
+        </Card>
+      )}
+
+      <Txt variant="heading" style={{ marginTop: space.xl, marginBottom: space.md }}>Kelas Hari Ini</Txt>
+      {todayClasses.length === 0 ? (
+        <Txt variant="caption" testID="today-classes-empty">Tidak ada kelas terjadwal hari ini.</Txt>
+      ) : (
+        todayClasses.map((c) => (
+          <Pressable
+            key={c.id}
+            testID={`today-class-${c.id}`}
+            onPress={() => router.push(`/class/${c.id}`)}
+            style={({ pressed }) => [styles.todayRow, pressed && { opacity: 0.85 }]}
+          >
+            <Ionicons name="time-outline" size={20} color={colors.onBrandPrimary} />
+            <View style={{ flex: 1 }}>
+              <Txt variant="label" style={{ color: colors.onBrandPrimary }}>{c.name}</Txt>
+              <Txt variant="caption" style={{ color: colors.onBrandPrimary, opacity: 0.85 }}>{c.schedule} · {c.student_count} siswa</Txt>
+            </View>
+            <Txt variant="label" style={{ color: colors.onBrandPrimary }}>Isi Presensi</Txt>
+            <Ionicons name="chevron-forward" size={18} color={colors.onBrandPrimary} />
+          </Pressable>
+        ))
+      )}
+
+      <Txt variant="heading" style={{ marginTop: space.xl, marginBottom: space.md }}>Semua Kelas</Txt>
       {classes.data?.map((c) => (
         <Pressable
           key={c.id}
@@ -164,6 +217,14 @@ const useStyles = makeStyles((c) => ({
     backgroundColor: c.surface, borderRadius: radius.md, marginBottom: space.sm, borderWidth: 1, borderColor: c.border,
   },
   dot: { width: 10, height: 10, borderRadius: 5 },
+  chart: { flexDirection: "row", alignItems: "flex-end", gap: space.sm, height: 150, marginTop: space.md },
+  barCol: { flex: 1, alignItems: "center", gap: 4, height: "100%" },
+  barTrack: { flex: 1, width: "100%", justifyContent: "flex-end" },
+  bar: { width: "100%", borderRadius: radius.sm },
+  todayRow: {
+    flexDirection: "row", alignItems: "center", gap: space.md, padding: space.lg, minHeight: 64,
+    backgroundColor: c.brandPrimary, borderRadius: radius.md, marginBottom: space.sm,
+  },
   actions: { flexDirection: "row", gap: space.md, marginTop: space.md },
   action: {
     flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.md, minHeight: 52,

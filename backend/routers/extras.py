@@ -157,3 +157,24 @@ async def monthly_report(_: FinanceUser, month: str = Query(..., pattern=r"^\d{4
         unpaid_total=sum(i["amount"] for i in unpaid),
         classes=reports,
     )
+
+
+class TrendPoint(BaseModel):
+    month: str
+    income: int
+    count: int
+
+
+@router.get("/reports/trend", response_model=List[TrendPoint])
+async def income_trend(_: FinanceUser, months: int = Query(6, ge=1, le=24)):
+    now = datetime.now(timezone.utc)
+    points = []
+    for back in range(months - 1, -1, -1):
+        idx = now.year * 12 + (now.month - 1) - back
+        y, m = divmod(idx, 12)
+        start = datetime(y, m + 1, 1, tzinfo=timezone.utc)
+        ny, nm = divmod(idx + 1, 12)
+        end = datetime(ny, nm + 1, 1, tzinfo=timezone.utc)
+        paid = await db.invoices.find({"status": "paid", "paid_at": {"$gte": start, "$lt": end}}, {"_id": 0, "amount": 1}).to_list(5000)
+        points.append(TrendPoint(month=f"{y}-{m + 1:02d}", income=sum(i["amount"] for i in paid), count=len(paid)))
+    return points

@@ -46,7 +46,15 @@
           "cameraPermission": false
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Pindai kartu QR siswa untuk presensi cepat",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

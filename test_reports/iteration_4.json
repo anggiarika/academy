@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 4 (Tren Pemasukan + Presensi QR + Reminder Massal + Jadwal Kelas Hari Ini) tested end-to-end. Backend: 6/6 pytest cases in test_iter4.py pass — GET /api/reports/trend returns 6 chronological points ending at current month 2026-10 for keuangan; months=3 returns 3; months=0 and months=25 return 422; guru 403; unauthenticated 401. Frontend (390x844, Jan 2026 clock reports today Sabtu 10 Okt 2026): Beranda income-trend-card renders with 6 trend-bar-YYYY-MM elements (2026-05 through 2026-10) only for keuangan; guru does NOT see the card. 'Kelas Hari Ini' section shows 2 today-class-<id> rows for Saturday (seed Gymnastic D & English D on Sabtu). Student detail Aisyah Putri renders student-qr-card containing a QR SVG with value PRESENSI:<student_id>. Class attendance screen (English D) shows scan-qr-button; tapping opens full-screen QR modal — on web the camera permission is not granted so camera-permission-box with camera-allow-button (Izinkan Kamera) and qr-close-button render cleanly (no red screen, no crash); closing the modal returns to attendance and save-attendance-button remains visible. Tagihan tab bulk reminder: after seeding one TEST_ unpaid invoice (parent_phone present, created_at = now-4d, reminded_at null) via Mongo, bulk-reminder-banner shows '1 tagihan lewat 3 hari…' with 'Berikutnya: Aisyah Putri' and bulk-remind-next-button; clicking it opens WhatsApp (api.whatsapp.com/send/?phone=6281234567801&text=…) in a new tab AND fires POST /api/invoices/TEST_bulk_<id>/remind, after which the banner disappears and the row shows 'diingatkan 1x (10 Okt 2026)'. All iterations 1-3 smoke flows (login, Beranda stats, tab navigation) still work. Only the pre-existing non-blocking RN-web warning '\"shadow*\" style props are deprecated. Use \"boxShadow\".' persists.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter4.py",
+    "/app/test_reports/pytest/iter4_results.xml"
+  ],
+  "action_items": [
+    "(Carried over, cosmetic) RN-web console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Still present from iter 2; 3rd-party. No fix required."
+  ],
+  "critical_code_review_comments": [
+    "routers/extras.py income_trend: builds [months] contiguous UTC month windows via integer month-index arithmetic ending at the current month; Query(ge=1, le=24) correctly returns 422 for 0/25. Each window runs its own small aggregate — fine at this scale; could later batch via one $group pipeline.",
+    "frontend/app/(tabs)/index.tsx: income-trend-card is gated behind isFinance && trend.data and the useQuery is also enabled=isFinance, so guru never issues a trend request (good). maxIncome is Math.max(1,…) to avoid div-by-zero when all income is 0.",
+    "frontend/src/format.ts isScheduledToday uses DAYS[new Date().getDay()] (Sunday=0) with lowercase substring match, which correctly maps today's weekday to Indonesian names like 'sabtu'/'jumat' — no locale bug.",
+    "frontend/src/components/qr-scanner.tsx: proper permission flow with Izinkan Kamera (requestPermission) and Buka Pengaturan (Linking.openSettings) when canAskAgain is false; last-scan dedupe guards 2500ms repeat scans; Modal presentationStyle fullScreen prevents stacking.",
+    "frontend/app/(tabs)/tagihan.tsx pending filter uses daysSince>=3 && parent_phone && (!reminded_at || not-today), remind() awaits WA first then api.remindInvoice then invalidateQueries, so the banner only disappears after the backend write succeeds. Clean."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter4.py (new, 6 tests)"],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100% of iteration 4 flows"},
+  "seed_data_creation": "Inserted one TEST_bulk_<uuid> unpaid invoice via Mongo (parent_phone 6281234567801, program gymnastic, amount 350000, created_at = now-4d, reminded_at null, reminder_count 0) to exercise the bulk reminder banner. After the click-through test (which incremented reminder_count to 1), the TEST_bulk_* document was deleted from the invoices collection. Nothing else was mutated.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Today in this environment is Saturday 2026-10-10 (Indonesian 'Sabtu'). The seed classes 'Gymnastic D' and 'English D' are scheduled on Sabtu, so Beranda shows exactly 2 today-class-<id> rows for the keuangan/guru account on Saturday. On other weekdays expect different classes or today-classes-empty. For the bulk reminder you must seed an unpaid invoice with parent_phone + created_at>=4 days ago + reminded_at=null (or last-reminder a different day); the banner only re-appears the next calendar day after a successful /remind call. QR modal on web will always show camera-permission-box (never camera-view) because getUserMedia is blocked in Playwright by default — do not treat that as a bug.",
+  "rca_of_issue": ""
+}

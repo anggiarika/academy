@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import { storage } from "@/src/utils/storage";
 import type {
   AttendanceIn, AttendanceOut, ClassOut, ClassUpdate, DashboardOut, InvoiceIn, InvoiceOut,
-  IzinIn, MonthlyReport, PackageOut, StudentAttendanceItem, StudentIn, StudentOut, TokenOut, TransactionOut, UserCreate, UserOut,
+  IzinIn, MonthlyReport, PackageOut, StudentAttendanceItem, StudentIn, StudentOut, TokenOut, TransactionOut, TrendPoint, UserCreate, UserOut,
 } from "@/src/types";
 
 const BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api`;
@@ -124,4 +124,5 @@ export const api = {
   deleteUser: (id: string) => request<{ ok: boolean }>(`/users/${id}`, { method: "DELETE" }),
 
   monthlyReport: (month: string) => request<MonthlyReport>(`/reports/monthly?month=${month}`),
+  incomeTrend: () => request<TrendPoint[]>("/reports/trend?months=6"),
 };

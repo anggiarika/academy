@@ -151,3 +151,9 @@ export function reportHtml(r: MonthlyReport): string {
   <table><tr><th>Kelas</th><th>Program</th><th>Pertemuan</th><th>Hadir</th><th>Izin</th><th>Alpha</th><th>Pengganti</th></tr>${rows}</table>
   </body></html>`;
 }
+
+/** True if a free-text schedule like "Senin & Rabu 15:00" mentions today's weekday. */
+export function isScheduledToday(schedule: string): boolean {
+  const today = DAYS[new Date().getDay()].toLowerCase();
+  return schedule.toLowerCase().includes(today);
+}
